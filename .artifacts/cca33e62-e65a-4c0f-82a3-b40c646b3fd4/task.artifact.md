@@ -25,21 +25,23 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
     - [x] `NoteEntity`, `NoteDao` ve `AppDatabase` oluşturulması.
     - [x] `NoteRepository` ve `NoteViewModel` kodlanması.
     - [x] UI'ın ViewModel'e bağlanması.
-- [/] Faz 4: Arama ve Silme Özellikleri
-    - [/] `NoteDao` ve `NoteRepository` arama fonksiyonlarının eklenmesi.
-    - [ ] `NoteViewModel` üzerinde arama state'inin yönetilmesi.
-    - [ ] `MainScreen` arama çubuğu entegrasyonu.
-    - [ ] `NoteEditorScreen` silme butonu entegrasyonu.
+- [x] Faz 4: Arama ve Silme Özellikleri
+    - [x] `NoteDao` ve `NoteRepository` arama fonksiyonlarının eklenmesi.
+    - [x] `NoteViewModel` üzerinde arama state'inin yönetilmesi.
+    - [x] `MainScreen` arama çubuğu entegrasyonu.
+    - [x] `NoteEditorScreen` silme butonu entegrasyonu.
 
 ## [ ] Faz 4: Evernote Yetenekleri
 - [ ] Markdown desteği (Zengin metin için).
 - [ ] Notlara etiket ve kategori (Notebook) ekleme.
 - [ ] Arama motoru (Metin içi ve etiket bazlı).
 
-## [ ] Faz 5: Güvenlik ve Modern Özellikler
-- [ ] Biyometrik kilit entegrasyonu.
-- [ ] Hatırlatıcılar ve Takvim görünümü.
-- [ ] Widget desteği (Sticky Notes).
+## [/] Faz 5: Premium UI ve Hibrit Özellikler (İmajlara Göre)
+- [/] Veri modellerinin klasör ve otomatik kayıt için güncellenmesi.
+- [ ] `BottomNavigationBar` ve `AddNoteDialog` bileşenlerinin kodlanması.
+- [ ] `FoldersScreen`, `CalendarScreen`, `MoreScreen` ve `SettingsScreen` arayüzlerinin oluşturulması.
+- [ ] `NoteEditorScreen` üzerinde "Otomatik Kayıt" mantığının kurulması.
+- [ ] Projenin "zırhlı" derleme başarısının ve APK güncelleme uyumunun doğrulanması.
 
 ## [ ] Faz 6: Çoklu Platform Genişlemesi
 - [ ] iOS hedefinin eklenmesi.

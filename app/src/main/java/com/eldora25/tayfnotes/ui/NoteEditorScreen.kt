@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.components.ColorSelector
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +33,24 @@ fun NoteEditorScreen(
         Color(android.graphics.Color.parseColor(colorHex))
     } catch (e: Exception) {
         MaterialTheme.colorScheme.surface
+    }
+
+    // Auto-save logic
+    LaunchedEffect(title, content, colorHex) {
+        if (title.isNotEmpty() || content.isNotEmpty()) {
+            delay(1000) // Wait for 1 second of inactivity
+            val finalNote = (note ?: Note(
+                id = note?.id ?: System.currentTimeMillis().toString(),
+                title = title,
+                content = content
+            )).copy(
+                title = title,
+                content = content,
+                colorHex = colorHex,
+                lastModified = System.currentTimeMillis()
+            )
+            onSave(finalNote)
+        }
     }
 
     if (showDeleteDialog && note != null) {
@@ -70,19 +89,8 @@ fun NoteEditorScreen(
                             Icon(Icons.Default.Delete, contentDescription = "Sil")
                         }
                     }
-                    IconButton(onClick = {
-                        val finalNote = (note ?: Note(
-                            id = System.currentTimeMillis().toString(),
-                            title = "",
-                            content = ""
-                        )).copy(
-                            title = title,
-                            content = content,
-                            colorHex = colorHex
-                        )
-                        onSave(finalNote)
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = "Kaydet")
+                    IconButton(onClick = onBack) { // Exit editor, auto-save handled by LaunchedEffect
+                        Icon(Icons.Default.Check, contentDescription = "Tamam")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

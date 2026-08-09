@@ -1,39 +1,43 @@
-# TayfNotes: Not Silme ve Arama Özellikleri Uygulama Planı
+# TayfNotes: Tam Hibrit Özellikler ve İleri Seviye UI Uygulama Planı
 
-Bu plan, uygulamaya Evernote ve ColorNote'un temel işlevselliklerinden olan "Not Silme" ve "Metin Bazlı Arama" özelliklerinin eklenmesini kapsar.
+Bu plan, TayfNotes'u gönderilen ekran görüntülerine sadık kalarak premium bir arayüze kavuşturmayı, otomatik kayıt, klasörleme ve gelişmiş ayarlar sistemini entegre etmeyi hedefler.
 
 ## User Review Required
 
-> [!TIP]
-> Arama özelliği, ana ekranda interaktif bir arama çubuğu (Search Bar) ile sunulacaktır. Silme özelliği ise hem not editörü içerisinden hem de ana ekranda uzun basma (veya silme butonu) ile erişilebilir olacaktır.
+> [!IMPORTANT]
+> **APK Çakışma Çözümü:** Paket ismini `com.eldora25.tayfnotes` olarak sabitledik. Eğer cihazınızda daha önce `com.example.tayfnotes` yüklüyse bir defaya mahsus silmeniz gerekebilir. Bundan sonraki tüm `v01.x` sürümleri birbirinin üzerine yüklenebilecektir.
 
 ## Proposed Changes
 
-### 1. Veri Katmanı (Data Layer)
-- [MODIFY] `data/dao/NoteDao.kt`: Metin içeriğine veya başlığa göre arama yapmayı sağlayan SQL sorgusunun eklenmesi.
-- [MODIFY] `data/repository/NoteRepository.kt`: Arama fonksiyonunun repository katmanına taşınması.
+### 1. Veri Modeli ve Veritabanı Genişletmesi
+- [NEW] `FolderEntity.kt`: Klasörlerin (ID, İsim, Renk, Not Sayısı) saklanacağı tablo.
+- [MODIFY] `NoteEntity.kt`: Notlara `folderId` ve `lastModified` alanlarının eklenmesi.
+- [MODIFY] `AppDatabase.kt`: Klasör DAO'sunun eklenmesi ve versiyon artırımı.
 
-### 2. İş Mantığı (ViewModel)
-- [MODIFY] `ui/viewmodel/NoteViewModel.kt`:
-    - `searchQuery` state'inin eklenmesi.
-    - Arama sonuçlarını anlık olarak filtreleyen mantığın kurulması.
-    - Not silme fonksiyonunun UI tarafından tetiklenmesi.
+### 2. UI Geliştirme (İmajlara Sadık Kalınarak)
+- [NEW] `ui/components/BottomNavigationBar.kt`: Notlar, Klasörler, Takvim, Arama, Diğer.
+- [NEW] `ui/components/AddNoteDialog.kt`: Metin ve Kontrol Listesi seçim popup'ı.
+- [NEW] `ui/FoldersScreen.kt`: İmaj 8'deki gibi klasör listesi.
+- [NEW] `ui/SettingsScreen.kt`: İmaj 1-5 arası gösterilen detaylı ayarlar kategorileri.
+- [NEW] `ui/MoreScreen.kt`: İmaj 10'daki profil ve hızlı erişim menüsü.
+- [NEW] `ui/CalendarScreen.kt`: İmaj 9'daki takvim görünümü taslağı.
 
-### 3. UI Geliştirme (Compose)
-- [MODIFY] `ui/MainScreen.kt`:
-    - `TopAppBar` içerisine etkileşimli bir arama çubuğu eklenmesi.
-    - Not listesinin arama sorgusuna göre filtrelenmesi.
-- [MODIFY] `ui/NoteEditorScreen.kt`:
-    - Mevcut bir not düzenleniyorsa "Sil" butonu (Çöp kutusu ikonu) eklenmesi.
-- [MODIFY] `MainActivity.kt`: Silme işlemi sonrası navigasyonun yönetilmesi.
+### 3. Fonksiyonel Geliştirmeler
+- [MODIFY] `NoteEditorScreen.kt`:
+    - **Otomatik Kayıt:** Her harf değişiminde veya `onDispose` anında veritabanına yazma.
+    - **Kaydet Butonu Kaldırma:** Kullanıcı deneyimini ColorNote'a benzetme.
+- [MODIFY] `NoteViewModel.kt`: Klasör bazlı filtreleme ve ayarlar state yönetimi.
+
+### 4. GitHub ve APK Otomasyonu
+- Mevcut zırhlı yedekleme ve isimlendirme (`TayfNotes_v01.x.apk`) yapısı korunacaktır.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile APK üretim başarısı.
-- APK isminin `TayfNotes_v01.13.apk` (veya sıradaki numara) olduğu doğrulanacak.
+- `./gradlew :app:assembleDebug` ile başarılı derleme.
+- APK isminin `TayfNotes_v01.14.apk` (veya sıradaki numara) olduğu doğrulanacak.
 
 ### Manual Verification
-- Arama çubuğuna bir kelime yazıldığında sadece o kelimeyi içeren notların listelendiği görülecek.
-- Not editöründe "Sil" butonuna basıldığında onay istenip notun silindiği ve ana ekrana dönüldüğü teyit edilecek.
-- GitHub Actions üzerinde `sourcecodes_*.zip` dosyasının yeni özellikleri içerdiği kontrol edilecek.
+- Alt menüdeki ikonlar arası geçiş kontrol edilecek.
+- Yeni bir not yazılırken uygulamadan çıkılıp girildiğinde verinin korunduğu teyit edilecek.
+- Ayarlar menüsündeki listelerin imajlarla birebir uyumu kontrol edilecek.

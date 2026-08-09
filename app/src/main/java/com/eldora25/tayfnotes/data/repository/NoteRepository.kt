@@ -17,6 +17,12 @@ class NoteRepository(private val noteDao: NoteDao) {
         }
     }
 
+    fun getNotesByFolder(folderId: String): Flow<List<Note>> {
+        return noteDao.getNotesByFolder(folderId).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     suspend fun insert(note: Note) {
         noteDao.insertNote(NoteEntity.fromDomain(note))
     }

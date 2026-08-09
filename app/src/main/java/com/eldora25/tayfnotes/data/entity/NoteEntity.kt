@@ -12,9 +12,11 @@ data class NoteEntity(
     val title: String,
     val content: String,
     val colorHex: String,
-    val type: String, // Store as String for simplicity in Room
-    val tags: String, // Store as comma-separated string
+    val type: String,
+    val tags: String,
+    val folderId: String?,
     val createdAt: Long,
+    val lastModified: Long,
     val isLocked: Boolean
 ) {
     fun toDomain(): Note = Note(
@@ -24,7 +26,9 @@ data class NoteEntity(
         colorHex = colorHex,
         type = NoteType.valueOf(type),
         tags = if (tags.isEmpty()) emptyList() else tags.split(","),
+        folderId = folderId,
         createdAt = createdAt,
+        lastModified = lastModified,
         isLocked = isLocked
     )
 
@@ -36,7 +40,9 @@ data class NoteEntity(
             colorHex = note.colorHex,
             type = note.type.name,
             tags = note.tags.joinToString(","),
+            folderId = note.folderId,
             createdAt = note.createdAt,
+            lastModified = note.lastModified,
             isLocked = note.isLocked
         )
     }

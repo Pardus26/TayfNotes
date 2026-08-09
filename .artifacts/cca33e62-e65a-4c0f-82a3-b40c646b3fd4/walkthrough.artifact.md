@@ -41,9 +41,14 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **ViewModel Bağlantısı:** UI bileşenleri, verileri gerçek zamanlı olarak veritabanından takip eden `NoteViewModel`'e bağlandı.
 - **Otomatik Kayıt:** Not editöründe yapılan değişiklikler artık "Kaydet" butonuyla kalıcı hale getiriliyor.
 
+### 8. Not Silme ve Arama Özellikleri
+- **Anlık Arama:** Ana ekrana eklenen etkileşimli arama çubuğu ile notlar başlık ve içeriğe göre anlık olarak filtreleniyor.
+- **Güvenli Silme:** Not editörü içerisine eklenen silme butonu, kullanıcıdan onay alarak notu veritabanından kalıcı olarak kaldırıyor.
+- **Dinamik Liste:** Not listesi boş olduğunda veya arama sonucu bulunamadığında kullanıcıya anlamlı geri bildirimler veriliyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.12.apk` üretildi.
-- [x] Room veritabanı entegrasyonu tamamlandı.
-- [x] GitHub Push başarılı: Tüm veritabanı kodları ve UI güncellemeleri `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.13.apk` üretildi.
+- [x] Arama ve silme özellikleri veritabanı ile tam uyumlu çalışıyor.
+- [x] GitHub Push başarılı: Tüm yeni özellikler ve yedekleme kuralları güncellendi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
