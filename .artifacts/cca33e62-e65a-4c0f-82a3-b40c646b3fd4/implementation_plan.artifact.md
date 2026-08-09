@@ -1,46 +1,39 @@
-# TayfNotes: Gelişmiş Klasörleme, Akıllı Başlık ve İleri Düzey Özelleştirme Planı
+# TayfNotes: Görsel Temalar ve Biyometrik Güvenlik Planı
 
-Bu plan, uygulamanın marka kimliğini güçlendirmeyi, klasörleme ve not yönetimi mantığını daha profesyonel bir seviyeye taşımayı hedefler.
+Bu plan, uygulamaya 10 farklı renk paleti, karanlık mod desteği ve biyometrik güvenlik (parmak izi/yüz tanıma) özelliklerinin eklenmesini kapsar.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **İsimlendirme:** Ana ekran başlığı "TayfNotes buildv01.x Tayfun YAMAK©" olarak güncellenecektir.
-> **Dışa Aktarma:** Notlar metin dosyası (.txt) olarak cihaza kaydedilebilecek şekilde "Export" özelliği eklenecektir.
+> **Biyometrik Güvenlik:** Kullanıcının cihazında parmak izi veya yüz tanıma kayıtlı olmalıdır. Uygulama açılışında veya kilitli notlara erişimde bu katman devreye girecektir.
+> **Tema Sistemi:** Seçilen tema tüm uygulamaya (arka planlar, butonlar, vurgular) anında uygulanacaktır.
 
 ## Proposed Changes
 
-### 1. Akıllı Not Mantığı ve Klasörleme
-- [MODIFY] `ui/NoteEditorScreen.kt`:
-    - Başlık boş bırakılırsa, içeriğin ilk 5 kelimesinden otomatik başlık üretme.
-    - Klasör seçimi için bir açılır menü (Dropdown) eklenmesi.
-- [MODIFY] `ui/FoldersScreen.kt`:
-    - Klasör oluştururken isim soran bir diyalog (Dialog) eklenmesi.
-    - Mevcut klasör adını düzenleme (Rename) özelliği.
+### 1. Görsel Tema Sistemi (10+ Renk Paleti)
+- [MODIFY] `ui/theme/Color.kt`: 10 farklı tema için (Örn: Ocean, Sunset, Forest, Lavender, Gold, vb.) renk tanımlamaları.
+- [MODIFY] `ui/theme/Theme.kt`: Dinamik tema seçimini destekleyen merkezi tema motoru.
+- [MODIFY] `ui/viewmodel/NoteViewModel.kt`: Seçilen tema ve karanlık mod tercihini saklayan `DataStore` entegrasyonu (başlangıçta ViewModel state).
 
-### 2. Görsel Özelleştirme (Premium Palet)
-- [MODIFY] `ui/components/ColorSelector.kt`:
-    - Renk sayısının 20+ adet profesyonel seçeneğe çıkarılması.
-    - Bir hamburger/ızgara menüsü üzerinden seçim yapılması.
-    - Son seçilen rengin varsayılan (Default) olarak hatırlanması.
-- [MODIFY] `ui/theme/Theme.kt`: Karanlık mod desteği ve 10 farklı renk paleti teması taslağının oluşturulması.
+### 2. Biyometrik Kilit Entegrasyonu
+- [MODIFY] `app/build.gradle.kts`: `androidx.biometric:biometric` kütüphanesinin eklenmesi.
+- [NEW] `util/BiometricHelper.kt`: Parmak izi/yüz tanıma doğrulama mantığı.
+- [MODIFY] `MainActivity.kt`: Uygulama açılışında (opsiyonel) veya kilitli notlarda biyometrik kontrol.
 
-### 3. Marka Kimliği ve Dışa Aktarma
-- [MODIFY] `ui/MainScreen.kt`: Başlık alanına versiyon ve telif bilgisinin eklenmesi.
-- [MODIFY] `ui/SettingsScreen.kt`: Versiyon ve yazar bilgisinin güncellenmesi.
-- [NEW] `util/FileExportHelper.kt`: Seçilen notu `.txt` olarak dışarı aktarma mantığı.
-
-### 4. Güvenlik ve İleri Seviye (Faz 8.5)
-- [NEW] `util/BiometricHelper.kt`: Parmak izi ve yüz tanıma entegrasyonu hazırlığı.
+### 3. UI Entegrasyonu
+- [MODIFY] `ui/SettingsScreen.kt`:
+    - İmaj 10'daki "Tema" butonunun işlevsel hale getirilmesi.
+    - Tema seçim diyaloğu (10 seçenekli görsel liste).
+    - Güvenlik kategorisinde "Biyometrik Kilidi Etkinleştir" seçeneği.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile derleme kontrolü.
-- APK isminin `TayfNotes_v01.18.apk` olduğu doğrulanacak.
+- `./gradlew :app:assembleDebug` ile build başarısı.
+- APK isminin `TayfNotes_v01.19.apk` olduğu doğrulanacak.
 
 ### Manual Verification
-- Başlıksız not yazıldığında ilk kelimelerin başlık olup olmadığı kontrol edilecek.
-- Klasör ismi değiştirme ve notu klasöre taşıma işlemleri test edilecek.
-- Ana ekranda "Tayfun YAMAK©" imzasının göründüğü teyit edilecek.
-- GitHub Actions yedekleme kontrolü yapılacak.
+- Ayarlar -> Tema kısmından farklı renk paletleri seçilecek ve arayüzün değiştiği görülecek.
+- Karanlık mod butonu test edilecek.
+- Biyometrik kilit aktifken notların açılışında doğrulama isteneceği teyit edilecek.
+- GitHub Actions yedekleme zip dosyası kontrol edilecek.

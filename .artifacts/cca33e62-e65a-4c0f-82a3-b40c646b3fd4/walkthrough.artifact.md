@@ -63,9 +63,16 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Akıllı Hatırlatıcı:** Not editörü içerisine tarih ve saat seçici eklendi. Belirlenen zamanda Android sistem bildirimi gönderiliyor.
 - **Modern Bildirimler:** Android 13+ uyumlu bildirim kanalları ve `AlarmManager` entegrasyonu tamamlandı.
 
+### 12. Akıllı Mantık ve Marka Kimliği
+- **İsimli Klasörleme:** Klasör oluştururken artık isim soruluyor ve sonradan düzenlenebiliyor.
+- **Akıllı Başlık:** Başlık girilmeyen notlarda, içeriğin ilk 5 kelimesi otomatik olarak başlık yapılıyor.
+- **Marka İmzası:** Ana ekran ve Ayarlar kısmına "TayfNotes buildv01.x Tayfun YAMAK©" ibaresi eklendi.
+- **20+ Renk Seçeneği:** Not editöründe hamburger/palette butonuyla açılan geniş bir renk yelpazesi sunuldu.
+- **Dışa Aktarma:** Seçilen notlar cihaza `.txt` dosyası olarak aktarılabiliyor ve paylaşılabiliyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.17.apk` üretildi.
-- [x] Takvim ve bildirim sistemi başarıyla test edildi.
-- [x] GitHub Push başarılı: Tüm yeni özellikler `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.18.apk` üretildi.
+- [x] Klasör yönetimi ve akıllı başlık sistemleri doğrulandı.
+- [x] GitHub Push başarılı: Tüm yeni mantık ve görsel geliştirmeler `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)

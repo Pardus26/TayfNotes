@@ -3,37 +3,56 @@ package com.eldora25.tayfnotes.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PremiumGold,
+enum class TayfTheme {
+    MIDNIGHT, SUNSET, FOREST, OCEAN, LAVENDER, ROSE, SLATE, EMERALD, ROYAL, CRIMSON
+}
+
+private fun getDarkColorScheme(theme: TayfTheme) = darkColorScheme(
+    primary = when(theme) {
+        TayfTheme.MIDNIGHT -> PremiumGold
+        TayfTheme.SUNSET -> SunsetPrimary
+        TayfTheme.FOREST -> ForestPrimary
+        TayfTheme.OCEAN -> OceanPrimary
+        TayfTheme.LAVENDER -> LavenderPrimary
+        TayfTheme.ROSE -> RosePrimary
+        TayfTheme.SLATE -> SlatePrimary
+        TayfTheme.EMERALD -> EmeraldPrimary
+        TayfTheme.ROYAL -> RoyalPrimary
+        TayfTheme.CRIMSON -> CrimsonPrimary
+    },
     secondary = MidnightLight,
-    tertiary = SpectrumBlue,
     background = MidnightBlue,
     surface = MidnightBlue,
     onPrimary = Color.Black,
-    onSecondary = Color.White,
-    onTertiary = Color.Black,
     onBackground = Color.White,
     onSurface = Color.White
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = MidnightBlue,
+private fun getLightColorScheme(theme: TayfTheme) = lightColorScheme(
+    primary = when(theme) {
+        TayfTheme.MIDNIGHT -> MidnightBlue
+        else -> when(theme) {
+            TayfTheme.SUNSET -> SunsetPrimary
+            TayfTheme.FOREST -> ForestPrimary
+            TayfTheme.OCEAN -> OceanPrimary
+            TayfTheme.LAVENDER -> LavenderPrimary
+            TayfTheme.ROSE -> RosePrimary
+            TayfTheme.SLATE -> SlatePrimary
+            TayfTheme.EMERALD -> EmeraldPrimary
+            TayfTheme.ROYAL -> RoyalPrimary
+            TayfTheme.CRIMSON -> CrimsonPrimary
+            else -> MidnightBlue
+        }
+    },
     secondary = MidnightLight,
-    tertiary = PremiumGold,
     background = Color.White,
     surface = Color.White,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.Black,
     onBackground = MidnightBlue,
     onSurface = MidnightBlue
 )
@@ -41,8 +60,8 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun TayfNotesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    currentTheme: TayfTheme = TayfTheme.MIDNIGHT,
+    dynamicColor: Boolean = false, // Disable for custom themes
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -50,9 +69,8 @@ fun TayfNotesTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> getDarkColorScheme(currentTheme)
+        else -> getLightColorScheme(currentTheme)
     }
 
     MaterialTheme(
