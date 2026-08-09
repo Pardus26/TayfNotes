@@ -24,9 +24,14 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Premium Doku:** Arka planda derin gece mavisi ve şık bir ızgara (grid) dokusu kullanıldı.
 - **Vektörel Kalite:** Tüm ikonlar XML formatında kodlandığı için her cihazda maksimum netlik sağlar.
 
+### 5. Renkli Not Izgarası (Ana Ekran)
+- **Dinamik Görünüm:** `LazyVerticalStaggeredGrid` kullanılarak ColorNote tarzı modern bir ızgara yapısı oluşturuldu.
+- **Mock Veri Entegrasyonu:** `:shared` modülü üzerinden gelen örnek notlar (renkli kartlar, etiketler ve kilit ikonları ile) ekrana bağlandı.
+- **Modern UI:** Material 3 bileşenleri (TopAppBar, FloatingActionButton) "Premium Midnight" temasıyla uyumlu hale getirildi.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.7.apk` üretildi.
-- [x] Premium ikon entegrasyonu tamamlandı.
-- [x] GitHub Push başarılı: Tüm kodlar ve yeni görseller `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.8.apk` üretildi.
+- [x] Gelişmiş kaynak kod yedekleme sistemi GitHub'da aktif edildi.
+- [x] Ana ekran (Grid) tasarımı başarıyla yerleştirildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)

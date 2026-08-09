@@ -13,11 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.eldora25.tayfnotes.shared.MockNoteProvider
+import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.components.NoteGridItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    onAddNote: () -> Unit,
+    onEditNote: (Note) -> Unit
+) {
     val notes = MockNoteProvider.getMockNotes()
 
     Scaffold(
@@ -37,7 +41,7 @@ fun MainScreen() {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Add Note */ },
+                onClick = onAddNote,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.Black
             ) {
@@ -61,7 +65,7 @@ fun MainScreen() {
                 items(notes) { note ->
                     NoteGridItem(
                         note = note,
-                        onClick = { /* TODO: Edit Note */ }
+                        onClick = { onEditNote(note) }
                     )
                 }
             }

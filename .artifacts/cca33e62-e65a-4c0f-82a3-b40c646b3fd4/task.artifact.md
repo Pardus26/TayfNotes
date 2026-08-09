@@ -14,10 +14,12 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [ ] Repository katmanının oluşturulması.
 
 ## [/] Faz 3: Hibrit Arayüz (Android/Compose)
-- [/] `shared` modülünde örnek veri sağlayıcı (`MockNoteProvider.kt`) oluşturulması.
-- [ ] Material 3 ve Premium Renklerin temaya entegrasyonu.
-- [ ] Not Kartı (`NoteCard.kt`) bileşeninin kodlanması.
-- [ ] Ana Ekran (`MainScreen.kt`) ızgara görünümünün oluşturulması.
+- [x] `shared` modülünde örnek veri sağlayıcı (`MockNoteProvider.kt`) oluşturulması.
+- [x] Material 3 ve Premium Renklerin temaya entegrasyonu.
+- [x] Not Kartı (`NoteGridItem.kt`) bileşeninin kodlanması.
+- [x] Ana Ekran (`MainScreen.kt`) ızgara görünümünün oluşturulması.
+- [/] Not Editörü (`NoteEditorScreen.kt`) ve Renk Seçici (`ColorSelector.kt`) kodlanması.
+- [ ] Navigasyon mantığının (Ana Ekran <-> Editör) kurulması.
 
 ## [ ] Faz 4: Evernote Yetenekleri
 - [ ] Markdown desteği (Zengin metin için).
