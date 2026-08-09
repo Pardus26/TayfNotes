@@ -10,9 +10,10 @@ data class Note(
     val colorHex: String = "#FFFFFF",
     val type: NoteType = NoteType.TEXT,
     val tags: List<String> = emptyList(),
-    val folderId: String? = null, // New field for organization
+    val folderId: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val lastModified: Long = System.currentTimeMillis(), // For auto-save tracking
+    val lastModified: Long = System.currentTimeMillis(),
+    val reminderTimestamp: Long? = null, // New field for scheduled alerts
     val isLocked: Boolean = false
 )
 

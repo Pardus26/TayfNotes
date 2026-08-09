@@ -17,7 +17,6 @@ import com.eldora25.tayfnotes.data.database.AppDatabase
 import com.eldora25.tayfnotes.data.repository.FolderRepository
 import com.eldora25.tayfnotes.data.repository.NoteRepository
 import com.eldora25.tayfnotes.shared.model.Note
-import com.eldora25.tayfnotes.shared.model.NoteType
 import com.eldora25.tayfnotes.ui.*
 import com.eldora25.tayfnotes.ui.components.AddNoteDialog
 import com.eldora25.tayfnotes.ui.components.BottomNavigationBar
@@ -111,7 +110,10 @@ class MainActivity : ComponentActivity() {
                                         onFolderClick = { /* Handle folder filter */ },
                                         onAddFolder = { noteViewModel.addFolder("Yeni Klasör", "#D4AF37") }
                                     )
-                                    is Screen.Calendar -> CalendarScreen()
+                                    is Screen.Calendar -> CalendarScreen(
+                                        notes = notes,
+                                        onEditNote = { note -> currentScreen = Screen.EditNote(note) }
+                                    )
                                     is Screen.More -> MoreScreen(onScreenChange = { currentScreen = it })
                                     is Screen.Settings -> SettingsScreen(
                                         onBack = { currentScreen = Screen.More },

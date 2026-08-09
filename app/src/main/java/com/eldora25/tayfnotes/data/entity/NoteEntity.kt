@@ -17,6 +17,7 @@ data class NoteEntity(
     val folderId: String?,
     val createdAt: Long,
     val lastModified: Long,
+    val reminderTimestamp: Long?,
     val isLocked: Boolean
 ) {
     fun toDomain(): Note = Note(
@@ -29,6 +30,7 @@ data class NoteEntity(
         folderId = folderId,
         createdAt = createdAt,
         lastModified = lastModified,
+        reminderTimestamp = reminderTimestamp,
         isLocked = isLocked
     )
 
@@ -43,6 +45,7 @@ data class NoteEntity(
             folderId = note.folderId,
             createdAt = note.createdAt,
             lastModified = note.lastModified,
+            reminderTimestamp = note.reminderTimestamp,
             isLocked = note.isLocked
         )
     }

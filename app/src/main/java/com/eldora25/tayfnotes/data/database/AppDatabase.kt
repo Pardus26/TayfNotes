@@ -9,7 +9,7 @@ import com.eldora25.tayfnotes.data.dao.NoteDao
 import com.eldora25.tayfnotes.data.entity.FolderEntity
 import com.eldora25.tayfnotes.data.entity.NoteEntity
 
-@Database(entities = [NoteEntity::class, FolderEntity::class], version = 2, exportSchema = false)
+@Database(entities = [NoteEntity::class, FolderEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun folderDao(): FolderDao
@@ -25,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "tayfnotes_database"
                 )
-                .fallbackToDestructiveMigration() // Simple for early development
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance

@@ -43,8 +43,8 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] `NoteEditorScreen` üzerinde "Otomatik Kayıt" mantığının kurulması.
 - [x] Projenin "zırhlı" derleme başarısının ve APK güncelleme uyumunun doğrulanması.
 
-## [/] Faz 6: Markdown ve Çevrimiçi Yedekleme
-- [/] Markdown (rendering) ve Bulut Senkronizasyon (Ktor/Firebase) bağımlılıklarının eklenmesi.
-- [ ] `NoteEditorScreen` Markdown önizleme özelliğinin eklenmesi.
-- [ ] `SyncManager` ile temel bulut yedekleme altyapısının kurulması.
-- [ ] Ayarlar ekranındaki senkronizasyon butonunun işlevsel hale getirilmesi.
+## [x] Faz 6: Markdown ve Çevrimiçi Yedekleme
+- [x] Markdown (rendering) ve Bulut Senkronizasyon (Ktor/Firebase) bağımlılıklarının eklenmesi.
+- [x] `NoteEditorScreen` Markdown önizleme özelliğinin eklenmesi.
+- [x] `SyncManager` ile temel bulut yedekleme altyapısının kurulması.
+- [x] Ayarlar ekranındaki senkronizasyon butonunun işlevsel hale getirilmesi.

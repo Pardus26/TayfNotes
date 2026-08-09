@@ -52,9 +52,15 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **İmaj Bazlı Arayüz:** Gönderdiğiniz ekran görüntülerine sadık kalarak Alt Navigasyon Bar, Takvim, Arama ve Gelişmiş Ayarlar ekranları kodlandı.
 - **APK Güncelleme Çözümü:** `versionCode` ve paket izolasyonu sayesinde eski sürümleri silmeden güncelleme yapabilme imkanı sağlandı.
 
+### 10. Markdown Desteği ve Çevrimiçi Yedekleme
+- **Zengin İçerik:** Not editörüne Markdown desteği eklendi. Artık `# Başlık`, `**Kalın**`, `*İtalik*` gibi formatlar kullanılabiliyor.
+- **Önizleme Modu:** Editörde "Göz" ikonuyla yazılan notların zengin metin halini anlık görebilirsiniz.
+- **Bulut Senkronizasyonu:** `SyncManager` ve Ktor kütüphanesi ile çevrimiçi yedekleme altyapısı kuruldu.
+- **Ayarlar Entegrasyonu:** Ayarlar menüsündeki "Çevrimiçi yedekleme" butonu artık senkronizasyon sürecini tetikliyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.15.apk` üretildi.
-- [x] Otomatik kayıt ve klasörleme özellikleri test edildi.
-- [x] GitHub Push başarılı: Tüm premium UI kodları ve veritabanı geliştirmeleri `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.16.apk` üretildi.
+- [x] Markdown render motoru başarıyla entegre edildi.
+- [x] GitHub Push başarılı: Tüm yeni özellikler ve yedekleme kuralları güncellendi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
