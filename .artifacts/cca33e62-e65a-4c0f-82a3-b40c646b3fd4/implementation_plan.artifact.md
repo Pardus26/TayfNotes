@@ -1,38 +1,39 @@
-# TayfNotes: Yerel Veritabanı (Room) Entegrasyonu Planı
+# TayfNotes: Not Silme ve Arama Özellikleri Uygulama Planı
 
-Bu plan, uygulamadaki notların telefon hafızasında kalıcı olarak saklanmasını sağlayacak Room Veritabanı mimarisinin kurulumunu ve UI entegrasyonunu kapsar.
+Bu plan, uygulamaya Evernote ve ColorNote'un temel işlevselliklerinden olan "Not Silme" ve "Metin Bazlı Arama" özelliklerinin eklenmesini kapsar.
 
 ## User Review Required
 
-> [!NOTE]
-> Verileri saklamak için Android'in standart ve en güvenli kütüphanesi olan **Room Persistence Library** kullanılacaktır. İleride Multi-platform (KMP) geçişi yapıldığında, bu katman kolayca SQLDelight veya Room-KMP'ye taşınabilecek şekilde soyutlanacaktır.
+> [!TIP]
+> Arama özelliği, ana ekranda interaktif bir arama çubuğu (Search Bar) ile sunulacaktır. Silme özelliği ise hem not editörü içerisinden hem de ana ekranda uzun basma (veya silme butonu) ile erişilebilir olacaktır.
 
 ## Proposed Changes
 
-### 1. Bağımlılıklar (Room)
-- [MODIFY] `app/build.gradle.kts`: Room (Compiler, Runtime, KTX) bağımlılıklarının eklenmesi.
+### 1. Veri Katmanı (Data Layer)
+- [MODIFY] `data/dao/NoteDao.kt`: Metin içeriğine veya başlığa göre arama yapmayı sağlayan SQL sorgusunun eklenmesi.
+- [MODIFY] `data/repository/NoteRepository.kt`: Arama fonksiyonunun repository katmanına taşınması.
 
-### 2. Veri Katmanı (Data Layer)
-- [NEW] `data/entity/NoteEntity.kt`: Veritabanı tablo yapısı.
-- [NEW] `data/dao/NoteDao.kt`: Veritabanı sorguları (Ekle, Sil, Güncelle, Listele).
-- [NEW] `data/database/AppDatabase.kt`: Room veritabanı tanımı.
-- [NEW] `data/repository/NoteRepository.kt`: UI ve Veritabanı arasındaki köprü.
+### 2. İş Mantığı (ViewModel)
+- [MODIFY] `ui/viewmodel/NoteViewModel.kt`:
+    - `searchQuery` state'inin eklenmesi.
+    - Arama sonuçlarını anlık olarak filtreleyen mantığın kurulması.
+    - Not silme fonksiyonunun UI tarafından tetiklenmesi.
 
-### 3. İş Mantığı (ViewModel)
-- [NEW] `ui/viewmodel/NoteViewModel.kt`: Veritabanı işlemlerini yöneten ve UI'a "State" sağlayan katman.
-
-### 4. UI Entegrasyonu
-- [MODIFY] `ui/MainScreen.kt`: Gerçek veritabanından notları çekme ve görüntüleme.
-- [MODIFY] `ui/NoteEditorScreen.kt`: "Kaydet" butonu tıklandığında veriyi kalıcı olarak kaydetme.
-- [MODIFY] `MainActivity.kt`: ViewModel'in başlatılması ve ekrana bağlanması.
+### 3. UI Geliştirme (Compose)
+- [MODIFY] `ui/MainScreen.kt`:
+    - `TopAppBar` içerisine etkileşimli bir arama çubuğu eklenmesi.
+    - Not listesinin arama sorgusuna göre filtrelenmesi.
+- [MODIFY] `ui/NoteEditorScreen.kt`:
+    - Mevcut bir not düzenleniyorsa "Sil" butonu (Çöp kutusu ikonu) eklenmesi.
+- [MODIFY] `MainActivity.kt`: Silme işlemi sonrası navigasyonun yönetilmesi.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile başarılı derleme.
-- APK isminin `TayfNotes_v01.11.apk` (veya sıradaki numara) olduğu doğrulanacak.
+- `./gradlew :app:assembleDebug` ile APK üretim başarısı.
+- APK isminin `TayfNotes_v01.13.apk` (veya sıradaki numara) olduğu doğrulanacak.
 
 ### Manual Verification
-- Bir not oluşturup "Kaydet" dedikten sonra uygulama kapatılıp açıldığında notun hala listede olduğu görülecek.
-- Notun rengi değiştirilip kaydedildiğinde, ana ekranda yeni rengiyle göründüğü teyit edilecek.
-- GitHub Actions üzerinde `sourcecodes_*.zip` dosyasının oluştuğu ve Room kodlarını içerdiği kontrol edilecek.
+- Arama çubuğuna bir kelime yazıldığında sadece o kelimeyi içeren notların listelendiği görülecek.
+- Not editöründe "Sil" butonuna basıldığında onay istenip notun silindiği ve ana ekrana dönüldüğü teyit edilecek.
+- GitHub Actions üzerinde `sourcecodes_*.zip` dosyasının yeni özellikleri içerdiği kontrol edilecek.

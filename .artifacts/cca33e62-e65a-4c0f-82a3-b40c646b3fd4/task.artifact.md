@@ -20,11 +20,16 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] Ana Ekran (`MainScreen.kt`) ızgara görünümünün oluşturulması.
 - [x] Not Editörü (`NoteEditorScreen.kt`) ve Renk Seçici (`ColorSelector.kt`) kodlanması.
 - [x] Navigasyon mantığının (Ana Ekran <-> Editör) kurulması.
-- [/] Faz 2: Veri Katmanı (Room) Entegrasyonu
-    - [/] Room bağımlılıklarının eklenmesi.
-    - [ ] `NoteEntity`, `NoteDao` ve `AppDatabase` oluşturulması.
-    - [ ] `NoteRepository` ve `NoteViewModel` kodlanması.
-    - [ ] UI'ın ViewModel'e bağlanması.
+- [x] Faz 2: Veri Katmanı (Room) Entegrasyonu
+    - [x] Room bağımlılıklarının eklenmesi.
+    - [x] `NoteEntity`, `NoteDao` ve `AppDatabase` oluşturulması.
+    - [x] `NoteRepository` ve `NoteViewModel` kodlanması.
+    - [x] UI'ın ViewModel'e bağlanması.
+- [/] Faz 4: Arama ve Silme Özellikleri
+    - [/] `NoteDao` ve `NoteRepository` arama fonksiyonlarının eklenmesi.
+    - [ ] `NoteViewModel` üzerinde arama state'inin yönetilmesi.
+    - [ ] `MainScreen` arama çubuğu entegrasyonu.
+    - [ ] `NoteEditorScreen` silme butonu entegrasyonu.
 
 ## [ ] Faz 4: Evernote Yetenekleri
 - [ ] Markdown desteği (Zengin metin için).

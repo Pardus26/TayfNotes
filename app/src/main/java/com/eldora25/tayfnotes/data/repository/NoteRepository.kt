@@ -11,6 +11,12 @@ class NoteRepository(private val noteDao: NoteDao) {
         entities.map { it.toDomain() }
     }
 
+    fun search(query: String): Flow<List<Note>> {
+        return noteDao.searchNotes("%$query%").map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     suspend fun insert(note: Note) {
         noteDao.insertNote(NoteEntity.fromDomain(note))
     }

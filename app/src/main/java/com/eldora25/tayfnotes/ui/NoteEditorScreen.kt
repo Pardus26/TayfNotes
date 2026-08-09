@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,16 +20,39 @@ import com.eldora25.tayfnotes.ui.components.ColorSelector
 fun NoteEditorScreen(
     note: Note? = null,
     onBack: () -> Unit,
-    onSave: (Note) -> Unit
+    onSave: (Note) -> Unit,
+    onDelete: (Note) -> Unit
 ) {
     var title by remember { mutableStateOf(note?.title ?: "") }
     var content by remember { mutableStateOf(note?.content ?: "") }
     var colorHex by remember { mutableStateOf(note?.colorHex ?: "#FFFFFF") }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     
     val backgroundColor = try {
         Color(android.graphics.Color.parseColor(colorHex))
     } catch (e: Exception) {
         MaterialTheme.colorScheme.surface
+    }
+
+    if (showDeleteDialog && note != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Notu Sil") },
+            text = { Text("Bu notu silmek istediğinize emin misiniz?") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    onDelete(note)
+                    showDeleteDialog = false
+                }) {
+                    Text("Sil", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Vazgeç")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -41,6 +65,11 @@ fun NoteEditorScreen(
                     }
                 },
                 actions = {
+                    if (note != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Sil")
+                        }
+                    }
                     IconButton(onClick = {
                         val finalNote = (note ?: Note(
                             id = System.currentTimeMillis().toString(),

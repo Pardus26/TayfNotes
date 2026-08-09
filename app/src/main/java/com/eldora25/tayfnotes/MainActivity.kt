@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
             TayfNotesTheme {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
                 val notes by noteViewModel.allNotes.collectAsState()
+                val searchQuery by noteViewModel.searchQuery.collectAsState()
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -49,6 +50,8 @@ class MainActivity : ComponentActivity() {
                         is Screen.Main -> {
                             MainScreen(
                                 notes = notes,
+                                searchQuery = searchQuery,
+                                onSearchQueryChanged = { noteViewModel.onSearchQueryChanged(it) },
                                 onAddNote = { currentScreen = Screen.EditNote() },
                                 onEditNote = { note -> currentScreen = Screen.EditNote(note) }
                             )
@@ -61,6 +64,10 @@ class MainActivity : ComponentActivity() {
                                 onSave = { note ->
                                     noteViewModel.saveNote(note)
                                     currentScreen = Screen.Main 
+                                },
+                                onDelete = { note ->
+                                    noteViewModel.deleteNote(note)
+                                    currentScreen = Screen.Main
                                 }
                             )
                         }

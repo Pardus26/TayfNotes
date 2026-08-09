@@ -35,9 +35,15 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Pürüzsüz Geçiş:** Ana ekran ile editör arasında basit ve hızlı bir navigasyon yapısı kuruldu.
 - **Premium Dokunuş:** Seçilen renk, editörün üst barına ve arka planına (hafif tonlarda) dinamik olarak yansıtılıyor.
 
+### 7. Yerel Veritabanı (Room) Entegrasyonu
+- **Kalıcı Depolama:** Notların telefon hafızasında saklanması için Room kütüphanesi entegre edildi.
+- **DAO ve Repository:** Modern mimari prensiplerine uygun olarak veri erişim nesneleri ve depo katmanı kuruldu.
+- **ViewModel Bağlantısı:** UI bileşenleri, verileri gerçek zamanlı olarak veritabanından takip eden `NoteViewModel`'e bağlandı.
+- **Otomatik Kayıt:** Not editöründe yapılan değişiklikler artık "Kaydet" butonuyla kalıcı hale getiriliyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.10.apk` üretildi.
-- [x] Not ekleme ve renk seçimi özellikleri aktif edildi.
-- [x] GitHub Push başarılı: Tüm yeni ekranlar ve navigasyon kodları `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.12.apk` üretildi.
+- [x] Room veritabanı entegrasyonu tamamlandı.
+- [x] GitHub Push başarılı: Tüm veritabanı kodları ve UI güncellemeleri `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
