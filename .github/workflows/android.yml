@@ -31,3 +31,36 @@ jobs:
       with:
         name: TayfNotes-APKs
         path: app/build/outputs/apk/debug/TayfNotes_v*.apk
+
+    - name: Prepare Source Code Backup
+      run: |
+        BUILD_NO=${{ github.run_number }}
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        SUFFIX="-${BUILD_NO}_${COMMIT_SHA}"
+        BACKUP_DIR="source_backup"
+        mkdir -p "$BACKUP_DIR"
+        
+        # Files to include (src, build files, configs)
+        FILES=$(find . -maxdepth 3 \( -path "./app/src" -o -path "./shared/src" -o -name "*.gradle.kts" -o -name "*.properties" -o -name "*.toml" \) -not -path "*/build/*" -not -path "*/.gradle/*")
+        
+        # Advanced copying and renaming logic
+        # We find all files in the repository that are not ignored/hidden/build folders
+        find . -type f -not -path '*/.*' -not -path '*/build/*' -not -path '*/shared/build/*' -not -path '*/app/build/*' -not -path '*/.gradle/*' | while read file; do
+            # Create same directory structure in backup folder
+            dest_dir="$BACKUP_DIR/$(dirname "$file")"
+            mkdir -p "$dest_dir"
+            # Copy and rename file: filename.ext -> filename.ext-build_commit
+            filename=$(basename "$file")
+            cp "$file" "$dest_dir/${filename}${SUFFIX}"
+        done
+        
+        # Create the zip file
+        ZIP_NAME="sourcecodes_${BUILD_NO}_${COMMIT_SHA}.zip"
+        zip -r "$ZIP_NAME" "$BACKUP_DIR"
+        echo "ZIP_FILE=$ZIP_NAME" >> $GITHUB_ENV
+
+    - name: Upload Source Code Backup
+      uses: actions/upload-artifact@v4
+      with:
+        name: TayfNotes-SourceCode-Backup
+        path: ${{ env.ZIP_FILE }}

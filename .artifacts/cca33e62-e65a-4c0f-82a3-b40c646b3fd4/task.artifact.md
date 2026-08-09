@@ -3,7 +3,8 @@
 Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çoklu platform desteğine zemin hazırlayarak ilerlemeyi hedefler.
 
 ## [/] Faz 2: Veri ve Mimari Temelleri (Gelecek Odaklı)
-- [/] `shared` modülünün (KMP) taslağını oluşturma (İş mantığı ve Veri modelleri buraya taşınacak).
+- [x] `shared` modülünün (KMP) taslağını oluşturma (İş mantığı ve Veri modelleri buraya taşınacak).
+- [/] GitHub Actions: Kaynak kod yedekleme sisteminin kurulması (dosyaadı.uzantisi-buildno_commitno).
 - [ ] Hibrit Not veri modelinin tanımlanması (Renk, Metin, Liste, Etiketler).
 - [ ] Yerel veritabanı (Room veya SQLDelight) kurulumu.
 - [ ] Repository katmanının oluşturulması.
