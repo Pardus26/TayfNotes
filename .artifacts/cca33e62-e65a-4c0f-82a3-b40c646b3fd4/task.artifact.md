@@ -4,7 +4,11 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 
 ## [/] Faz 2: Veri ve Mimari Temelleri (Gelecek Odaklı)
 - [x] `shared` modülünün (KMP) taslağını oluşturma (İş mantığı ve Veri modelleri buraya taşınacak).
-- [/] GitHub Actions: Kaynak kod yedekleme sisteminin kurulması (dosyaadı.uzantisi-buildno_commitno).
+- [x] GitHub Actions: Kaynak kod yedekleme sisteminin kurulması (dosyaadı.uzantisi-buildno_commitno).
+- [x] Premium İkon Tasarımı ve Uygulanması.
+    - [x] `colors.xml` premium renklerin eklenmesi.
+    - [x] `ic_launcher_background.xml` modern ızgara tasarımı.
+    - [x] `ic_launcher_foreground.xml` Tayf/Spectrum logolu "T" tasarımı.
 - [ ] Hibrit Not veri modelinin tanımlanması (Renk, Metin, Liste, Etiketler).
 - [ ] Yerel veritabanı (Room veya SQLDelight) kurulumu.
 - [ ] Repository katmanının oluşturulması.
