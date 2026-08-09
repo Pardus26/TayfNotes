@@ -32,32 +32,47 @@ jobs:
         name: TayfNotes-APKs
         path: app/build/outputs/apk/debug/TayfNotes_v*.apk
 
-    - name: Prepare Source Code Backup
+    - name: Shielded Source Code Backup
       run: |
         BUILD_NO=${{ github.run_number }}
         COMMIT_SHA=$(git rev-parse --short HEAD)
         SUFFIX="-${BUILD_NO}_${COMMIT_SHA}"
-        BACKUP_DIR="source_backup"
+        BACKUP_DIR="source_backup_${BUILD_NO}"
         mkdir -p "$BACKUP_DIR"
         
-        # Files to include (src, build files, configs)
-        FILES=$(find . -maxdepth 3 \( -path "./app/src" -o -path "./shared/src" -o -name "*.gradle.kts" -o -name "*.properties" -o -name "*.toml" \) -not -path "*/build/*" -not -path "*/.gradle/*")
+        echo "Starting advanced file renaming and backup..."
         
-        # Advanced copying and renaming logic
-        # We find all files in the repository that are not ignored/hidden/build folders
-        find . -type f -not -path '*/.*' -not -path '*/build/*' -not -path '*/shared/build/*' -not -path '*/app/build/*' -not -path '*/.gradle/*' | while read file; do
-            # Create same directory structure in backup folder
-            dest_dir="$BACKUP_DIR/$(dirname "$file")"
+        # Define files to include: source code, build scripts, configurations
+        # We use 'find' to get all files except unwanted directories
+        find . -type f \
+          -not -path '*/.*' \
+          -not -path '*/build/*' \
+          -not -path '*/app/build/*' \
+          -not -path '*/shared/build/*' \
+          -not -path '*/.gradle/*' \
+          -not -name "*.apk" \
+          -not -name "*.zip" | while read file; do
+            
+            # Remove leading './' if present
+            clean_path="${file#./}"
+            
+            # Prepare destination path
+            dest_file="$BACKUP_DIR/${clean_path}${SUFFIX}"
+            dest_dir=$(dirname "$dest_file")
+            
+            # Ensure target directory exists in backup
             mkdir -p "$dest_dir"
-            # Copy and rename file: filename.ext -> filename.ext-build_commit
-            filename=$(basename "$file")
-            cp "$file" "$dest_dir/${filename}${SUFFIX}"
+            
+            # Copy and rename
+            cp "$file" "$dest_file"
         done
         
-        # Create the zip file
+        # Create the zip file with the dynamic name
         ZIP_NAME="sourcecodes_${BUILD_NO}_${COMMIT_SHA}.zip"
-        zip -r "$ZIP_NAME" "$BACKUP_DIR"
+        cd "$BACKUP_DIR" && zip -r "../$ZIP_NAME" . && cd ..
+        
         echo "ZIP_FILE=$ZIP_NAME" >> $GITHUB_ENV
+        echo "Backup completed: $ZIP_NAME"
 
     - name: Upload Source Code Backup
       uses: actions/upload-artifact@v4

@@ -13,11 +13,11 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [ ] Yerel veritabanı (Room veya SQLDelight) kurulumu.
 - [ ] Repository katmanının oluşturulması.
 
-## [ ] Faz 3: Hibrit Arayüz (Android/Compose)
-- [ ] Material 3 ve "Dinamik Renk" teması kurulumu.
-- [ ] Ana Ekran: ColorNote stili renkli ızgara (Grid) ve liste görünümü.
-- [ ] Not Düzenleyici: Basit metin ve liste geçişi.
-- [ ] Notlara renk atama arayüzü.
+## [/] Faz 3: Hibrit Arayüz (Android/Compose)
+- [/] `shared` modülünde örnek veri sağlayıcı (`MockNoteProvider.kt`) oluşturulması.
+- [ ] Material 3 ve Premium Renklerin temaya entegrasyonu.
+- [ ] Not Kartı (`NoteCard.kt`) bileşeninin kodlanması.
+- [ ] Ana Ekran (`MainScreen.kt`) ızgara görünümünün oluşturulması.
 
 ## [ ] Faz 4: Evernote Yetenekleri
 - [ ] Markdown desteği (Zengin metin için).

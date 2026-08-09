@@ -19,9 +19,14 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Dinamik Zip:** Tüm yedeklenen dosyalar `sourcecodes_buildno_commitno.zip` adıyla paketlenir.
 - **Artifact Yükleme:** Oluşan zip dosyası GitHub Actions "Summary" sayfasından indirilebilir.
 
+### 4. Premium İkon Tasarımı
+- **Görsel Kimlik:** "Tayf" ismine uygun olarak, modern bir "T" harfi üzerine spektrum (renk tayfı) geçişleri eklendi.
+- **Premium Doku:** Arka planda derin gece mavisi ve şık bir ızgara (grid) dokusu kullanıldı.
+- **Vektörel Kalite:** Tüm ikonlar XML formatında kodlandığı için her cihazda maksimum netlik sağlar.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.6.apk` üretildi.
-- [x] GitHub Push başarılı: Tüm kodlar `main` branch'ine gönderildi.
-- [x] Workflow güncellendi ve test edildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.7.apk` üretildi.
+- [x] Premium ikon entegrasyonu tamamlandı.
+- [x] GitHub Push başarılı: Tüm kodlar ve yeni görseller `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
