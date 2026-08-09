@@ -1,5 +1,6 @@
 package com.eldora25.tayfnotes.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -12,7 +13,9 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isSyncing: Boolean,
+    onSyncClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -32,7 +35,13 @@ fun SettingsScreen(
                 .padding(paddingValues)
         ) {
             item { SettingCategory("Çevrimiçi Senkronizasyon") }
-            item { SettingItem("Çevrimiçi yedekleme", "Tayfun Yamak") }
+            item { 
+                SettingItem(
+                    title = "Çevrimiçi yedekleme", 
+                    subtitle = if (isSyncing) "Senkronize ediliyor..." else "Tayfun Yamak",
+                    onClick = onSyncClick
+                ) 
+            }
             
             item { SettingCategory("Genel") }
             item { SettingItem("Varsayılan Ekran", "Notlar") }
@@ -68,10 +77,11 @@ fun SettingCategory(title: String) {
 }
 
 @Composable
-fun SettingItem(title: String, subtitle: String) {
+fun SettingItem(title: String, subtitle: String, onClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(16.dp)
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium)

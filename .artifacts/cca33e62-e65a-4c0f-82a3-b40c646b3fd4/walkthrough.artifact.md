@@ -46,9 +46,15 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Güvenli Silme:** Not editörü içerisine eklenen silme butonu, kullanıcıdan onay alarak notu veritabanından kalıcı olarak kaldırıyor.
 - **Dinamik Liste:** Not listesi boş olduğunda veya arama sonucu bulunamadığında kullanıcıya anlamlı geri bildirimler veriliyor.
 
+### 9. Tam Hibrit ve Premium UI Deneyimi
+- **Otomatik Kayıt:** ColorNote stilinde, editörden çıkıldığında veya harf yazıldığında veri anında veritabanına kaydediliyor.
+- **Klasörleme Sistemi:** Notlar artık özel isimli ve renkli klasörler altında organize edilebiliyor.
+- **İmaj Bazlı Arayüz:** Gönderdiğiniz ekran görüntülerine sadık kalarak Alt Navigasyon Bar, Takvim, Arama ve Gelişmiş Ayarlar ekranları kodlandı.
+- **APK Güncelleme Çözümü:** `versionCode` ve paket izolasyonu sayesinde eski sürümleri silmeden güncelleme yapabilme imkanı sağlandı.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.13.apk` üretildi.
-- [x] Arama ve silme özellikleri veritabanı ile tam uyumlu çalışıyor.
-- [x] GitHub Push başarılı: Tüm yeni özellikler ve yedekleme kuralları güncellendi.
+- [x] Yerel build başarılı: `TayfNotes_v01.15.apk` üretildi.
+- [x] Otomatik kayıt ve klasörleme özellikleri test edildi.
+- [x] GitHub Push başarılı: Tüm premium UI kodları ve veritabanı geliştirmeleri `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)

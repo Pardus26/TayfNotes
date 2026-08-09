@@ -1,43 +1,36 @@
-# TayfNotes: Tam Hibrit Özellikler ve İleri Seviye UI Uygulama Planı
+# TayfNotes: Çevrimiçi Yedekleme ve Markdown Desteği Planı
 
-Bu plan, TayfNotes'u gönderilen ekran görüntülerine sadık kalarak premium bir arayüze kavuşturmayı, otomatik kayıt, klasörleme ve gelişmiş ayarlar sistemini entegre etmeyi hedefler.
+Bu plan, TayfNotes uygulamasına Evernote benzeri zengin içerik desteği (Markdown) ve ColorNote benzeri güvenli bulut yedekleme altyapısının entegrasyonunu kapsar.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **APK Çakışma Çözümü:** Paket ismini `com.eldora25.tayfnotes` olarak sabitledik. Eğer cihazınızda daha önce `com.example.tayfnotes` yüklüyse bir defaya mahsus silmeniz gerekebilir. Bundan sonraki tüm `v01.x` sürümleri birbirinin üzerine yüklenebilecektir.
+> **Çevrimiçi Yedekleme:** İlk aşamada Firebase Authentication ve Firestore kullanarak "Tayfun Yamak" adına bir hesap yapısı ve veri senkronizasyonu kuracağız.
+> **Markdown Desteği:** Not editörüne, yazılan metni anında zengin metne dönüştüren bir önizleme modu ekleyeceğiz.
 
 ## Proposed Changes
 
-### 1. Veri Modeli ve Veritabanı Genişletmesi
-- [NEW] `FolderEntity.kt`: Klasörlerin (ID, İsim, Renk, Not Sayısı) saklanacağı tablo.
-- [MODIFY] `NoteEntity.kt`: Notlara `folderId` ve `lastModified` alanlarının eklenmesi.
-- [MODIFY] `AppDatabase.kt`: Klasör DAO'sunun eklenmesi ve versiyon artırımı.
+### 1. `:shared` Modülü (KMP Hazırlığı)
+- [MODIFY] `shared/build.gradle.kts`: Multiplatform Ktor (Network) ve Firebase (açık kaynak alternatifleri) için zemin hazırlığı.
 
-### 2. UI Geliştirme (İmajlara Sadık Kalınarak)
-- [NEW] `ui/components/BottomNavigationBar.kt`: Notlar, Klasörler, Takvim, Arama, Diğer.
-- [NEW] `ui/components/AddNoteDialog.kt`: Metin ve Kontrol Listesi seçim popup'ı.
-- [NEW] `ui/FoldersScreen.kt`: İmaj 8'deki gibi klasör listesi.
-- [NEW] `ui/SettingsScreen.kt`: İmaj 1-5 arası gösterilen detaylı ayarlar kategorileri.
-- [NEW] `ui/MoreScreen.kt`: İmaj 10'daki profil ve hızlı erişim menüsü.
-- [NEW] `ui/CalendarScreen.kt`: İmaj 9'daki takvim görünümü taslağı.
+### 2. Markdown Entegrasyonu
+- [MODIFY] `app/build.gradle.kts`: Markdown rendering kütüphanesi (Örn: `multiplatform-markdown` veya Android-specific rendering) eklenmesi.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Markdown önizleme butonu ve render motorunun entegrasyonu.
 
-### 3. Fonksiyonel Geliştirmeler
-- [MODIFY] `NoteEditorScreen.kt`:
-    - **Otomatik Kayıt:** Her harf değişiminde veya `onDispose` anında veritabanına yazma.
-    - **Kaydet Butonu Kaldırma:** Kullanıcı deneyimini ColorNote'a benzetme.
-- [MODIFY] `NoteViewModel.kt`: Klasör bazlı filtreleme ve ayarlar state yönetimi.
+### 3. Çevrimiçi Yedekleme Arka Planı
+- [NEW] `data/sync/SyncManager.kt`: Yerel veritabanı ile bulut arasındaki farkları yöneten senkronizasyon mantığı.
+- [MODIFY] `ui/viewmodel/NoteViewModel.kt`: "Sync" (Senkronizasyon) tetikleyicisi eklenmesi.
 
-### 4. GitHub ve APK Otomasyonu
-- Mevcut zırhlı yedekleme ve isimlendirme (`TayfNotes_v01.x.apk`) yapısı korunacaktır.
+### 4. UI Güncellemesi
+- [MODIFY] `ui/SettingsScreen.kt`: İmaj 1'deki "Çevrimiçi yedekleme" butonunun işlevsel hale getirilmesi.
 
 ## Verification Plan
 
 ### Automated Verification
 - `./gradlew :app:assembleDebug` ile başarılı derleme.
-- APK isminin `TayfNotes_v01.14.apk` (veya sıradaki numara) olduğu doğrulanacak.
+- APK isminin `TayfNotes_v01.16.apk` olduğu doğrulanacak.
 
 ### Manual Verification
-- Alt menüdeki ikonlar arası geçiş kontrol edilecek.
-- Yeni bir not yazılırken uygulamadan çıkılıp girildiğinde verinin korunduğu teyit edilecek.
-- Ayarlar menüsündeki listelerin imajlarla birebir uyumu kontrol edilecek.
+- Not içerisine `# Başlık` veya `**kalın**` yazıldığında Markdown önizlemesinin doğruluğu.
+- Ayarlar menüsünden "Senkronizasyon" butonuna basıldığında (şimdilik log bazlı) yedekleme sürecinin başlaması.
+- GitHub Actions üzerinde kaynak kod yedeği (`sourcecodes_*.zip`) kontrol edilecek.

@@ -7,6 +7,7 @@ import com.eldora25.tayfnotes.data.repository.FolderRepository
 import com.eldora25.tayfnotes.data.repository.NoteRepository
 import com.eldora25.tayfnotes.shared.model.Folder
 import com.eldora25.tayfnotes.shared.model.Note
+import com.eldora25.tayfnotes.shared.sync.SyncManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -17,6 +18,10 @@ class NoteViewModel(
     private val noteRepository: NoteRepository,
     private val folderRepository: FolderRepository
 ) : ViewModel() {
+
+    private val syncManager = SyncManager()
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -70,6 +75,15 @@ class NoteViewModel(
     fun addFolder(name: String, colorHex: String) {
         viewModelScope.launch {
             folderRepository.insert(Folder(id = System.currentTimeMillis().toString(), name = name, colorHex = colorHex))
+        }
+    }
+
+    fun syncData() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            val currentNotes = notes.value
+            syncManager.syncNotes(currentNotes)
+            _isSyncing.value = false
         }
     }
 }

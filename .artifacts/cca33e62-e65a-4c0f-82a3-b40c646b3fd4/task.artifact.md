@@ -36,14 +36,15 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [ ] Notlara etiket ve kategori (Notebook) ekleme.
 - [ ] Arama motoru (Metin içi ve etiket bazlı).
 
-## [/] Faz 5: Premium UI ve Hibrit Özellikler (İmajlara Göre)
-- [/] Veri modellerinin klasör ve otomatik kayıt için güncellenmesi.
-- [ ] `BottomNavigationBar` ve `AddNoteDialog` bileşenlerinin kodlanması.
-- [ ] `FoldersScreen`, `CalendarScreen`, `MoreScreen` ve `SettingsScreen` arayüzlerinin oluşturulması.
-- [ ] `NoteEditorScreen` üzerinde "Otomatik Kayıt" mantığının kurulması.
-- [ ] Projenin "zırhlı" derleme başarısının ve APK güncelleme uyumunun doğrulanması.
+## [x] Faz 5: Premium UI ve Hibrit Özellikler (İmajlara Göre)
+- [x] Veri modellerinin klasör ve otomatik kayıt için güncellenmesi.
+- [x] `BottomNavigationBar` ve `AddNoteDialog` bileşenlerinin kodlanması.
+- [x] `FoldersScreen`, `CalendarScreen`, `MoreScreen` ve `SettingsScreen` arayüzlerinin oluşturulması.
+- [x] `NoteEditorScreen` üzerinde "Otomatik Kayıt" mantığının kurulması.
+- [x] Projenin "zırhlı" derleme başarısının ve APK güncelleme uyumunun doğrulanması.
 
-## [ ] Faz 6: Çoklu Platform Genişlemesi
-- [ ] iOS hedefinin eklenmesi.
-- [ ] Masaüstü (Windows/Linux) hedefinin eklenmesi.
-- [ ] Web (Compose Wasm) hedefinin eklenmesi.
+## [/] Faz 6: Markdown ve Çevrimiçi Yedekleme
+- [/] Markdown (rendering) ve Bulut Senkronizasyon (Ktor/Firebase) bağımlılıklarının eklenmesi.
+- [ ] `NoteEditorScreen` Markdown önizleme özelliğinin eklenmesi.
+- [ ] `SyncManager` ile temel bulut yedekleme altyapısının kurulması.
+- [ ] Ayarlar ekranındaki senkronizasyon butonunun işlevsel hale getirilmesi.

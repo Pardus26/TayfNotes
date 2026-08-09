@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
                 val notes by noteViewModel.notes.collectAsState()
                 val searchQuery by noteViewModel.searchQuery.collectAsState()
                 val folders by noteViewModel.allFolders.collectAsState()
+                val isSyncing by noteViewModel.isSyncing.collectAsState()
                 
                 var showAddNoteDialog by remember { mutableStateOf(false) }
 
@@ -112,7 +113,11 @@ class MainActivity : ComponentActivity() {
                                     )
                                     is Screen.Calendar -> CalendarScreen()
                                     is Screen.More -> MoreScreen(onScreenChange = { currentScreen = it })
-                                    is Screen.Settings -> SettingsScreen(onBack = { currentScreen = Screen.More })
+                                    is Screen.Settings -> SettingsScreen(
+                                        onBack = { currentScreen = Screen.More },
+                                        isSyncing = isSyncing,
+                                        onSyncClick = { noteViewModel.syncData() }
+                                    )
                                     else -> {}
                                 }
                             }
