@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         BackHandler { currentScreen = Screen.Main }
                         NoteEditorScreen(
                             note = screen.note,
+                            folders = folders,
                             onBack = { currentScreen = Screen.Main },
                             onSave = { noteViewModel.saveNote(it) },
                             onDelete = { 
@@ -107,8 +108,12 @@ class MainActivity : ComponentActivity() {
                                     )
                                     is Screen.Folders -> FoldersScreen(
                                         folders = folders,
-                                        onFolderClick = { /* Handle folder filter */ },
-                                        onAddFolder = { noteViewModel.addFolder("Yeni Klasör", "#D4AF37") }
+                                        onFolderClick = { folder ->
+                                            noteViewModel.onFolderSelected(folder.id)
+                                            currentScreen = Screen.Main
+                                        },
+                                        onAddFolder = { name -> noteViewModel.addFolder(name, "#D4AF37") },
+                                        onUpdateFolder = { folder -> noteViewModel.updateFolder(folder) }
                                     )
                                     is Screen.Calendar -> CalendarScreen(
                                         notes = notes,

@@ -58,9 +58,14 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Bulut Senkronizasyonu:** `SyncManager` ve Ktor kütüphanesi ile çevrimiçi yedekleme altyapısı kuruldu.
 - **Ayarlar Entegrasyonu:** Ayarlar menüsündeki "Çevrimiçi yedekleme" butonu artık senkronizasyon sürecini tetikliyor.
 
+### 11. Takvim ve Hatırlatıcı Sistemi
+- **Görsel Takvim:** Tüm notlarınızı bir takvim listesi üzerinde tarih bazlı görebileceğiniz `CalendarScreen.kt` eklendi.
+- **Akıllı Hatırlatıcı:** Not editörü içerisine tarih ve saat seçici eklendi. Belirlenen zamanda Android sistem bildirimi gönderiliyor.
+- **Modern Bildirimler:** Android 13+ uyumlu bildirim kanalları ve `AlarmManager` entegrasyonu tamamlandı.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.16.apk` üretildi.
-- [x] Markdown render motoru başarıyla entegre edildi.
-- [x] GitHub Push başarılı: Tüm yeni özellikler ve yedekleme kuralları güncellendi.
+- [x] Yerel build başarılı: `TayfNotes_v01.17.apk` üretildi.
+- [x] Takvim ve bildirim sistemi başarıyla test edildi.
+- [x] GitHub Push başarılı: Tüm yeni özellikler `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)

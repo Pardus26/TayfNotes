@@ -6,9 +6,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,8 +21,59 @@ import com.eldora25.tayfnotes.shared.model.Folder
 fun FoldersScreen(
     folders: List<Folder>,
     onFolderClick: (Folder) -> Unit,
-    onAddFolder: () -> Unit
+    onAddFolder: (String) -> Unit,
+    onUpdateFolder: (Folder) -> Unit
 ) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var folderToEdit by remember { mutableStateOf<Folder?>(null) }
+    var folderNameInput by remember { mutableStateOf("") }
+
+    if (showAddDialog || folderToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showAddDialog = false
+                folderToEdit = null
+                folderNameInput = ""
+            },
+            title = { Text(if (showAddDialog) "Yeni Klasör" else "Klasörü Düzenle") },
+            text = {
+                TextField(
+                    value = folderNameInput,
+                    onValueChange = { folderNameInput = it },
+                    placeholder = { Text("Klasör Adı") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (folderNameInput.isNotEmpty()) {
+                        if (showAddDialog) {
+                            onAddFolder(folderNameInput)
+                        } else {
+                            folderToEdit?.let {
+                                onUpdateFolder(it.copy(name = folderNameInput))
+                            }
+                        }
+                    }
+                    showAddDialog = false
+                    folderToEdit = null
+                    folderNameInput = ""
+                }) {
+                    Text("Kaydet")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showAddDialog = false
+                    folderToEdit = null
+                    folderNameInput = ""
+                }) {
+                    Text("Vazgeç")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -29,7 +81,7 @@ fun FoldersScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddFolder) {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Klasör Ekle")
             }
         }
@@ -57,7 +109,7 @@ fun FoldersScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                             Icon(
                                 Icons.Default.FolderOpen, 
                                 contentDescription = null,
@@ -66,8 +118,16 @@ fun FoldersScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(folder.name, style = MaterialTheme.typography.bodyLarge)
                         }
-                        Badge {
-                            Text("${folder.noteCount}")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { 
+                                folderToEdit = folder
+                                folderNameInput = folder.name
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Düzenle", modifier = Modifier.size(20.dp))
+                            }
+                            Badge {
+                                Text("${folder.noteCount}")
+                            }
                         }
                     }
                 }

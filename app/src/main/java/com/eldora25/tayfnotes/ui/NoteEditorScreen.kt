@@ -16,8 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.shared.model.Folder
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.components.ColorSelector
+import com.eldora25.tayfnotes.util.FileExportHelper
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,6 +28,7 @@ import java.util.*
 @Composable
 fun NoteEditorScreen(
     note: Note? = null,
+    folders: List<Folder> = emptyList(),
     onBack: () -> Unit,
     onSave: (Note) -> Unit,
     onDelete: (Note) -> Unit
@@ -35,9 +38,11 @@ fun NoteEditorScreen(
     var content by remember { mutableStateOf(note?.content ?: "") }
     var colorHex by remember { mutableStateOf(note?.colorHex ?: "#FFFFFF") }
     var reminderTimestamp by remember { mutableStateOf(note?.reminderTimestamp) }
+    var folderId by remember { mutableStateOf(note?.folderId) }
     
     var isPreviewMode by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showFolderMenu by remember { mutableStateOf(false) }
     
     val backgroundColor = try {
         Color(android.graphics.Color.parseColor(colorHex))
@@ -45,19 +50,26 @@ fun NoteEditorScreen(
         MaterialTheme.colorScheme.surface
     }
 
-    // Auto-save logic
-    LaunchedEffect(title, content, colorHex, reminderTimestamp) {
+    // Smart Titling & Auto-save logic
+    LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId) {
         if (title.isNotEmpty() || content.isNotEmpty()) {
             delay(1000)
+            
+            var finalTitle = title
+            if (finalTitle.isEmpty() && content.isNotEmpty()) {
+                finalTitle = content.trim().split("\\s+".toRegex()).take(5).joinToString(" ")
+            }
+
             val finalNote = (note ?: Note(
                 id = note?.id ?: System.currentTimeMillis().toString(),
-                title = title,
+                title = finalTitle,
                 content = content
             )).copy(
-                title = title,
+                title = finalTitle,
                 content = content,
                 colorHex = colorHex,
                 reminderTimestamp = reminderTimestamp,
+                folderId = folderId,
                 lastModified = System.currentTimeMillis()
             )
             onSave(finalNote)
@@ -121,6 +133,9 @@ fun NoteEditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { FileExportHelper.exportNoteToTxt(context, note ?: Note("temp", title, content, colorHex)) }) {
+                        Icon(Icons.Default.Share, contentDescription = "Dışa Aktar")
+                    }
                     IconButton(onClick = { showDateTimePicker() }) {
                         Icon(
                             imageVector = if (reminderTimestamp == null) Icons.Default.NotificationsNone else Icons.Default.NotificationsActive,
@@ -157,10 +172,32 @@ fun NoteEditorScreen(
                 .padding(16.dp)
         ) {
             if (!isPreviewMode) {
-                ColorSelector(
-                    selectedColorHex = colorHex,
-                    onColorSelected = { colorHex = it }
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Box {
+                        AssistChip(
+                            onClick = { showFolderMenu = true },
+                            label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
+                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                        DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Klasör Yok") },
+                                onClick = { folderId = null; showFolderMenu = false }
+                            )
+                            folders.forEach { folder ->
+                                DropdownMenuItem(
+                                    text = { Text(folder.name) },
+                                    onClick = { folderId = folder.id; showFolderMenu = false }
+                                )
+                            }
+                        }
+                    }
+                    
+                    ColorSelector(
+                        selectedColorHex = colorHex,
+                        onColorSelected = { colorHex = it }
+                    )
+                }
 
                 if (reminderTimestamp != null) {
                     val dateStr = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("tr")).format(Date(reminderTimestamp!!))
@@ -175,7 +212,7 @@ fun NoteEditorScreen(
                 TextField(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
+                    placeholder = { Text("Başlık (Opsiyonel)", style = MaterialTheme.typography.headlineSmall) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -205,7 +242,15 @@ fun NoteEditorScreen(
                 )
             } else {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    val displayTitle = if (title.isEmpty() && content.isNotEmpty()) {
+                        content.trim().split("\\s+".toRegex()).take(5).joinToString(" ")
+                    } else if (title.isEmpty()) {
+                        "Başlıksız Not"
+                    } else {
+                        title
+                    }
+                    
+                    Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     if (reminderTimestamp != null) {
                         Text(
                             SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("tr")).format(Date(reminderTimestamp!!)),

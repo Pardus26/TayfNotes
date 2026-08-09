@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,23 +46,15 @@ fun SettingsScreen(
             
             item { SettingCategory("Genel") }
             item { SettingItem("Varsayılan Ekran", "Notlar") }
-            item { SettingItem("Varsayılan renk", "") } // Icon/Box would be here
+            item { SettingItem("Varsayılan renk", "") }
             item { SettingItem("Varsayılan yazı büyüklüğü", "Büyük") }
             
             item { SettingCategory("Sıralama") }
             item { SettingItem("Varsayılan not sıralaması", "Son kullanılan sıralama") }
             
-            item { SettingCategory("Hatırlatıcı") }
-            item { SettingItem("Widget'ta sayacı göster", "Açık") }
-            
-            item { SettingCategory("Güvenlik") }
-            item { SettingItem("Ana Parola", "Ana parolayı sıfırlayın veya kaldırın") }
-            
-            item { SettingCategory("Yedekleme") }
-            item { SettingItem("Otomatik Yedekleme", "Açık") }
-            
             item { SettingCategory("Hakkında") }
-            item { SettingItem("Sürüm", "v01.x") }
+            item { SettingItem("Sürüm", "v01.${BuildConfig.BUILD_NO}") }
+            item { SettingItem("Yazar", "Tayfun YAMAK©") }
         }
     }
 }

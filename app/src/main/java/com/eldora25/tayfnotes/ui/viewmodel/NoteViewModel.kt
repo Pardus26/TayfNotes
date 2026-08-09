@@ -78,6 +78,18 @@ class NoteViewModel(
         }
     }
 
+    fun updateFolder(folder: Folder) {
+        viewModelScope.launch {
+            folderRepository.insert(folder)
+        }
+    }
+
+    fun deleteFolder(folder: Folder) {
+        viewModelScope.launch {
+            folderRepository.delete(folder)
+        }
+    }
+
     fun syncData() {
         viewModelScope.launch {
             _isSyncing.value = true

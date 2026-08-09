@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.BuildConfig
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.components.NoteGridItem
 
@@ -26,6 +27,7 @@ fun MainScreen(
     onEditNote: (Note) -> Unit
 ) {
     var isSearchActive by remember { mutableStateOf(false) }
+    val brandingTitle = "TayfNotes buildv01.${BuildConfig.BUILD_NO} Tayfun YAMAK©"
 
     Scaffold(
         topBar = {
@@ -60,7 +62,16 @@ fun MainScreen(
                 )
             } else {
                 CenterAlignedTopAppBar(
-                    title = { Text("TayfNotes", style = MaterialTheme.typography.headlineMedium) },
+                    title = { 
+                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            Text("TayfNotes", style = MaterialTheme.typography.headlineMedium)
+                            Text(
+                                "buildv01.${BuildConfig.BUILD_NO} Tayfun YAMAK©", 
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            )
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Ara")

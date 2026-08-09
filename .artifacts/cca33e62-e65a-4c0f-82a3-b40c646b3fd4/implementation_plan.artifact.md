@@ -1,36 +1,46 @@
-# TayfNotes: Takvim Görünümü ve Hatırlatıcı Sistemi Planı
+# TayfNotes: Gelişmiş Klasörleme, Akıllı Başlık ve İleri Düzey Özelleştirme Planı
 
-Bu plan, uygulamaya notlar için tarih bazlı takip (Takvim) ve zamanlanmış uyarılar (Hatırlatıcı/Bildirim) özelliklerinin eklenmesini kapsar.
+Bu plan, uygulamanın marka kimliğini güçlendirmeyi, klasörleme ve not yönetimi mantığını daha profesyonel bir seviyeye taşımayı hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Hatırlatıcılar:** Android 13+ cihazlarda bildirim gönderebilmek için kullanıcıdan izin istenecektir. Hatırlatıcılar `AlarmManager` kullanılarak tam zamanında tetiklenecek şekilde ayarlanacaktır.
+> **İsimlendirme:** Ana ekran başlığı "TayfNotes buildv01.x Tayfun YAMAK©" olarak güncellenecektir.
+> **Dışa Aktarma:** Notlar metin dosyası (.txt) olarak cihaza kaydedilebilecek şekilde "Export" özelliği eklenecektir.
 
 ## Proposed Changes
 
-### 1. Veri Modeli Güncellemesi
-- [MODIFY] `shared/src/commonMain/.../Note.kt`: `reminderTimestamp` alanının eklenmesi.
-- [MODIFY] `app/src/main/java/.../NoteEntity.kt`: Veritabanına hatırlatıcı zamanı sütununun eklenmesi.
+### 1. Akıllı Not Mantığı ve Klasörleme
+- [MODIFY] `ui/NoteEditorScreen.kt`:
+    - Başlık boş bırakılırsa, içeriğin ilk 5 kelimesinden otomatik başlık üretme.
+    - Klasör seçimi için bir açılır menü (Dropdown) eklenmesi.
+- [MODIFY] `ui/FoldersScreen.kt`:
+    - Klasör oluştururken isim soran bir diyalog (Dialog) eklenmesi.
+    - Mevcut klasör adını düzenleme (Rename) özelliği.
 
-### 2. Hatırlatıcı ve Bildirim Sistemi
-- [NEW] `util/NotificationHelper.kt`: Bildirim kanalları ve bildirim oluşturma mantığı.
-- [NEW] `receiver/ReminderReceiver.kt`: Alarm vakti geldiğinde bildirimi tetikleyen BroadcastReceiver.
+### 2. Görsel Özelleştirme (Premium Palet)
+- [MODIFY] `ui/components/ColorSelector.kt`:
+    - Renk sayısının 20+ adet profesyonel seçeneğe çıkarılması.
+    - Bir hamburger/ızgara menüsü üzerinden seçim yapılması.
+    - Son seçilen rengin varsayılan (Default) olarak hatırlanması.
+- [MODIFY] `ui/theme/Theme.kt`: Karanlık mod desteği ve 10 farklı renk paleti teması taslağının oluşturulması.
 
-### 3. UI Geliştirme (Takvim ve Editör)
-- [MODIFY] `ui/CalendarScreen.kt`: Aylık görünümde notların tarihlere göre listelenmesi.
-- [MODIFY] `ui/NoteEditorScreen.kt`: Not içerisinden tarih ve saat seçerek hatırlatıcı kurma butonu.
+### 3. Marka Kimliği ve Dışa Aktarma
+- [MODIFY] `ui/MainScreen.kt`: Başlık alanına versiyon ve telif bilgisinin eklenmesi.
+- [MODIFY] `ui/SettingsScreen.kt`: Versiyon ve yazar bilgisinin güncellenmesi.
+- [NEW] `util/FileExportHelper.kt`: Seçilen notu `.txt` olarak dışarı aktarma mantığı.
 
-### 4. Otomasyon ve Zırhlı Yapı
-- APK `TayfNotes_v01.x.apk` ve GitHub kaynak kod yedekleme sistemi korunacaktır.
+### 4. Güvenlik ve İleri Seviye (Faz 8.5)
+- [NEW] `util/BiometricHelper.kt`: Parmak izi ve yüz tanıma entegrasyonu hazırlığı.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile başarılı derleme.
-- APK isminin `TayfNotes_v01.17.apk` olduğu doğrulanacak.
+- `./gradlew :app:assembleDebug` ile derleme kontrolü.
+- APK isminin `TayfNotes_v01.18.apk` olduğu doğrulanacak.
 
 ### Manual Verification
-- Bir nota hatırlatıcı kurulduğunda belirlenen saatte bildirim geldiği test edilecek.
-- Takvim ekranında, hatırlatıcısı olan notların ilgili günlerde göründüğü teyit edilecek.
-- GitHub Actions üzerinde kaynak kod yedeği kontrol edilecek.
+- Başlıksız not yazıldığında ilk kelimelerin başlık olup olmadığı kontrol edilecek.
+- Klasör ismi değiştirme ve notu klasöre taşıma işlemleri test edilecek.
+- Ana ekranda "Tayfun YAMAK©" imzasının göründüğü teyit edilecek.
+- GitHub Actions yedekleme kontrolü yapılacak.
