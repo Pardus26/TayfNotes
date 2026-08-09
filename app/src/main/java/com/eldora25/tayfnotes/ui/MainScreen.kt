@@ -19,11 +19,10 @@ import com.eldora25.tayfnotes.ui.components.NoteGridItem
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    notes: List<Note>,
     onAddNote: () -> Unit,
     onEditNote: (Note) -> Unit
 ) {
-    val notes = MockNoteProvider.getMockNotes()
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(

@@ -18,8 +18,13 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] Material 3 ve Premium Renklerin temaya entegrasyonu.
 - [x] Not Kartı (`NoteGridItem.kt`) bileşeninin kodlanması.
 - [x] Ana Ekran (`MainScreen.kt`) ızgara görünümünün oluşturulması.
-- [/] Not Editörü (`NoteEditorScreen.kt`) ve Renk Seçici (`ColorSelector.kt`) kodlanması.
-- [ ] Navigasyon mantığının (Ana Ekran <-> Editör) kurulması.
+- [x] Not Editörü (`NoteEditorScreen.kt`) ve Renk Seçici (`ColorSelector.kt`) kodlanması.
+- [x] Navigasyon mantığının (Ana Ekran <-> Editör) kurulması.
+- [/] Faz 2: Veri Katmanı (Room) Entegrasyonu
+    - [/] Room bağımlılıklarının eklenmesi.
+    - [ ] `NoteEntity`, `NoteDao` ve `AppDatabase` oluşturulması.
+    - [ ] `NoteRepository` ve `NoteViewModel` kodlanması.
+    - [ ] UI'ın ViewModel'e bağlanması.
 
 ## [ ] Faz 4: Evernote Yetenekleri
 - [ ] Markdown desteği (Zengin metin için).

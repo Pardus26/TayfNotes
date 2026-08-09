@@ -29,9 +29,15 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **Mock Veri Entegrasyonu:** `:shared` modülü üzerinden gelen örnek notlar (renkli kartlar, etiketler ve kilit ikonları ile) ekrana bağlandı.
 - **Modern UI:** Material 3 bileşenleri (TopAppBar, FloatingActionButton) "Premium Midnight" temasıyla uyumlu hale getirildi.
 
+### 6. Not Ekleme ve Düzenleme (Hibrit Editör)
+- **Dinamik Editör:** Yeni not ekleme ve mevcut notları düzenleme ekranı (`NoteEditorScreen.kt`) oluşturuldu.
+- **Color Selector:** ColorNote'un ikonik renk paletini modern bir yatay şerit halinde sunduğumuz `ColorSelector.kt` bileşeni eklendi.
+- **Pürüzsüz Geçiş:** Ana ekran ile editör arasında basit ve hızlı bir navigasyon yapısı kuruldu.
+- **Premium Dokunuş:** Seçilen renk, editörün üst barına ve arka planına (hafif tonlarda) dinamik olarak yansıtılıyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.8.apk` üretildi.
-- [x] Gelişmiş kaynak kod yedekleme sistemi GitHub'da aktif edildi.
-- [x] Ana ekran (Grid) tasarımı başarıyla yerleştirildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.10.apk` üretildi.
+- [x] Not ekleme ve renk seçimi özellikleri aktif edildi.
+- [x] GitHub Push başarılı: Tüm yeni ekranlar ve navigasyon kodları `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
