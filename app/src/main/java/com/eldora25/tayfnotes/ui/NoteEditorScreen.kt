@@ -643,4 +643,458 @@ fun NoteEditorScreen(
                                             folder.id
                                         showFolderMenu =
                                             false
-                                
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    ColorSelector(
+                        selectedColorHex =
+                            colorHex,
+                        onColorSelected = {
+                            colorHex = it
+                        }
+                    )
+                }
+
+                /*
+                 * ------------------------------------------------
+                 * TITLE
+                 * ------------------------------------------------
+                 */
+                TextField(
+                    value = title,
+                    onValueChange = {
+                        title = it
+                    },
+                    placeholder = {
+                        Text(
+                            "Başlık",
+                            style =
+                                MaterialTheme.typography.headlineSmall
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor =
+                                Color.Transparent,
+                            unfocusedContainerColor =
+                                Color.Transparent,
+                            focusedIndicatorColor =
+                                Color.Transparent,
+                            unfocusedIndicatorColor =
+                                Color.Transparent
+                        ),
+                    textStyle =
+                        MaterialTheme.typography.headlineSmall
+                            .copy(
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+                )
+
+                /*
+                 * =================================================
+                 * SKETCH MODE
+                 * =================================================
+                 */
+                if (isSketchMode) {
+
+                    DrawingCanvas(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+
+                        initialData =
+                            sketchData,
+
+                        onDataChanged = {
+                            sketchData = it
+                        },
+
+                        /*
+                         * Sketch toolbar image button.
+                         */
+                        onRequestImage = {
+                            sketchGalleryLauncher.launch(
+                                "image/*"
+                            )
+                        },
+
+                        /*
+                         * URI returned from Android picker.
+                         */
+                        pendingImageUri =
+                            pendingSketchImageUri,
+
+                        /*
+                         * DrawingCanvas has consumed the URI.
+                         */
+                        onPendingImageConsumed = {
+                            pendingSketchImageUri = null
+                        }
+                    )
+
+                    /*
+                     * Small text field below the sketch page.
+                     */
+                    TextField(
+                        value = content,
+                        onValueChange = {
+                            content = it
+                        },
+                        placeholder = {
+                            Text(
+                                "Çizim hakkında not...",
+                                style =
+                                    MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor =
+                                    Color.Transparent,
+                                unfocusedContainerColor =
+                                    Color.Transparent
+                            )
+                    )
+
+                } else if (
+                    note?.type == NoteType.CHECKLIST ||
+                    checklistItems.isNotEmpty()
+                ) {
+
+                    /*
+                     * ------------------------------------------------
+                     * CHECKLIST
+                     * ------------------------------------------------
+                     */
+                    ChecklistEditor(
+                        items = checklistItems,
+                        onItemsChanged = {
+                            checklistItems = it
+                        }
+                    )
+
+                } else {
+
+                    /*
+                     * ------------------------------------------------
+                     * NORMAL NOTE IMAGES
+                     * ------------------------------------------------
+                     */
+                    if (imageUris.isNotEmpty()) {
+
+                        LazyRow(
+                            modifier =
+                                Modifier.padding(16.dp),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            items(imageUris) { uri ->
+
+                                Box {
+
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription =
+                                            null,
+                                        modifier =
+                                            Modifier
+                                                .size(120.dp)
+                                                .clip(
+                                                    RoundedCornerShape(
+                                                        8.dp
+                                                    )
+                                                ),
+                                        contentScale =
+                                            ContentScale.Crop
+                                    )
+
+                                    IconButton(
+                                        onClick = {
+                                            imageUris =
+                                                imageUris - uri
+                                        },
+                                        modifier =
+                                            Modifier
+                                                .align(
+                                                    Alignment.TopEnd
+                                                )
+                                                .size(24.dp)
+                                                .background(
+                                                    Color.Black.copy(
+                                                        alpha = 0.5f
+                                                    ),
+                                                    CircleShape
+                                                )
+                                    ) {
+
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription =
+                                                null,
+                                            tint =
+                                                Color.White,
+                                            modifier =
+                                                Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    /*
+                     * ------------------------------------------------
+                     * NORMAL TEXT
+                     * ------------------------------------------------
+                     */
+                    TextField(
+                        value = content,
+                        onValueChange = {
+                            content = it
+                        },
+                        placeholder = {
+                            Text(
+                                "Notunuzu yazın...",
+                                style =
+                                    MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .weight(1f)
+                                .padding(16.dp),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor =
+                                    Color.Transparent,
+                                unfocusedContainerColor =
+                                    Color.Transparent,
+                                focusedIndicatorColor =
+                                    Color.Transparent,
+                                unfocusedIndicatorColor =
+                                    Color.Transparent
+                            ),
+                        textStyle =
+                            MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+            } else {
+
+                /*
+                 * =================================================
+                 * PREVIEW MODE
+                 * =================================================
+                 */
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(16.dp)
+                ) {
+
+                    val displayTitle =
+                        if (
+                            title.isEmpty() &&
+                            checklistItems.isNotEmpty()
+                        ) {
+
+                            checklistItems
+                                .firstOrNull()
+                                ?.text
+                                ?: "Başlıksız Not"
+
+                        } else if (
+                            title.isEmpty()
+                        ) {
+
+                            "Başlıksız Not"
+
+                        } else {
+                            title
+                        }
+
+                    Text(
+                        displayTitle,
+                        style =
+                            MaterialTheme.typography.headlineSmall,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(16.dp)
+                    )
+
+                    if (checklistItems.isNotEmpty()) {
+
+                        checklistItems.forEach { item ->
+
+                            Row(
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+
+                                Checkbox(
+                                    checked =
+                                        item.isChecked,
+                                    onCheckedChange =
+                                        null,
+                                    enabled = false
+                                )
+
+                                Text(
+                                    item.text,
+                                    style =
+                                        if (item.isChecked) {
+
+                                            MaterialTheme
+                                                .typography
+                                                .bodyLarge
+                                                .copy(
+                                                    textDecoration =
+                                                        androidx.compose.ui
+                                                            .text
+                                                            .style
+                                                            .TextDecoration
+                                                            .LineThrough
+                                                )
+
+                                        } else {
+
+                                            MaterialTheme
+                                                .typography
+                                                .bodyLarge
+                                        }
+                                )
+                            }
+                        }
+
+                    } else {
+
+                        Text(
+                            content,
+                            style =
+                                MaterialTheme.typography.bodyLarge
+                        )
+                    }
+
+                    if (
+                        sketchData?.isNotEmpty() == true
+                    ) {
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(24.dp)
+                        )
+
+                        Text(
+                            "Çizim içeriyor. Düzenlemek için Sketch moduna geçin.",
+                            style =
+                                MaterialTheme.typography.labelSmall,
+                            color = Color.Gray
+                        )
+                    }
+
+                    imageUris.forEach { uri ->
+
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = null,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        vertical = 8.dp
+                                    )
+                                    .clip(
+                                        RoundedCornerShape(
+                                            8.dp
+                                        )
+                                    ),
+                            contentScale =
+                                ContentScale.FillWidth
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * ============================================================
+     * DELETE NOTE DIALOG
+     * ============================================================
+     */
+    if (
+        showDeleteDialog &&
+        note != null
+    ) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+
+            title = {
+                Text("Notu Sil")
+            },
+
+            text = {
+                Text(
+                    "Bu notu silmek istediğinize emin misiniz?"
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        onDelete(note)
+
+                        showDeleteDialog = false
+                    }
+                ) {
+
+                    Text(
+                        "Sil",
+                        color =
+                            MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Vazgeç")
+                }
+            }
+        )
+    }
+}
