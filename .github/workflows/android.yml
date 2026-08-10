@@ -1,81 +1,162 @@
-name: Android CI
+name: TayfNotes Android Build
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - main
+      - master
+
   pull_request:
-    branches: [ "main", "master" ]
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build TayfNotes APK
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      # ---------------------------------------------------------
+      # 1. Repository
+      # ---------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug
+      # ---------------------------------------------------------
+      # 2. Java 17
+      # ---------------------------------------------------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: TayfNotes-APKs
-        path: app/build/outputs/apk/debug/TayfNotes_v*.apk
+      # ---------------------------------------------------------
+      # 3. Gradle wrapper permission
+      # ---------------------------------------------------------
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x gradlew
 
-    - name: Shielded Source Code Backup
-      run: |
-        BUILD_NO=${{ github.run_number }}
-        COMMIT_SHA=$(git rev-parse --short HEAD)
-        SUFFIX="-${BUILD_NO}_${COMMIT_SHA}"
-        BACKUP_DIR="source_backup_${BUILD_NO}"
-        mkdir -p "$BACKUP_DIR"
-        
-        echo "Starting advanced file renaming and backup..."
-        
-        # Define files to include: source code, build scripts, configurations
-        # We use 'find' to get all files except unwanted directories
-        find . -type f \
-          -not -path '*/.*' \
-          -not -path '*/build/*' \
-          -not -path '*/app/build/*' \
-          -not -path '*/shared/build/*' \
-          -not -path '*/.gradle/*' \
-          -not -name "*.apk" \
-          -not -name "*.zip" | while read file; do
-            
-            # Remove leading './' if present
-            clean_path="${file#./}"
-            
-            # Prepare destination path
-            dest_file="$BACKUP_DIR/${clean_path}${SUFFIX}"
-            dest_dir=$(dirname "$dest_file")
-            
-            # Ensure target directory exists in backup
-            mkdir -p "$dest_dir"
-            
-            # Copy and rename
-            cp "$file" "$dest_file"
-        done
-        
-        # Create the zip file with the dynamic name
-        ZIP_NAME="sourcecodes_${BUILD_NO}_${COMMIT_SHA}.zip"
-        cd "$BACKUP_DIR" && zip -r "../$ZIP_NAME" . && cd ..
-        
-        echo "ZIP_FILE=$ZIP_NAME" >> $GITHUB_ENV
-        echo "Backup completed: $ZIP_NAME"
+      # ---------------------------------------------------------
+      # 4. Show build information
+      # ---------------------------------------------------------
+      - name: Show build information
+        run: |
+          echo "========================================"
+          echo "TayfNotes Android Build"
+          echo "========================================"
+          echo "GitHub Run Number : ${{ github.run_number }}"
+          echo "Git Commit        : ${{ github.sha }}"
+          echo "Branch            : ${{ github.ref_name }}"
+          echo "========================================"
 
-    - name: Upload Source Code Backup
-      uses: actions/upload-artifact@v4
-      with:
-        name: TayfNotes-SourceCode-Backup
-        path: ${{ env.ZIP_FILE }}
+      # ---------------------------------------------------------
+      # 5. Build Debug APK
+      # ---------------------------------------------------------
+      - name: Build Debug APK
+        run: |
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      # ---------------------------------------------------------
+      # 6. Verify generated APK
+      # ---------------------------------------------------------
+      - name: Verify APK
+        run: |
+          echo "Generated APK files:"
+          find app/build/outputs/apk/debug -maxdepth 1 -type f -name "*.apk" -print
+
+          if ! find app/build/outputs/apk/debug -maxdepth 1 -type f -name "TayfNotes_v*.apk" | grep -q .; then
+            echo "ERROR: TayfNotes APK was not generated!"
+            exit 1
+          fi
+
+      # ---------------------------------------------------------
+      # 7. Upload APK
+      # ---------------------------------------------------------
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TayfNotes-APK-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/TayfNotes_v*.apk
+          if-no-files-found: error
+
+      # ---------------------------------------------------------
+      # 8. Create source backup
+      # ---------------------------------------------------------
+      - name: Create Source Code Backup
+        run: |
+          BUILD_NO="${{ github.run_number }}"
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+
+          BACKUP_DIR="source_backup_${BUILD_NO}"
+          ZIP_NAME="sourcecodes_${BUILD_NO}_${COMMIT_SHA}.zip"
+
+          mkdir -p "$BACKUP_DIR"
+
+          echo "Creating source backup..."
+
+          find . -type f \
+            -not -path './.git/*' \
+            -not -path './.github/*' \
+            -not -path '*/build/*' \
+            -not -path './app/build/*' \
+            -not -path './shared/build/*' \
+            -not -path './.gradle/*' \
+            -not -name "*.apk" \
+            -not -name "*.zip" \
+            -print | while read file; do
+
+              clean_path="${file#./}"
+
+              dest_file="$BACKUP_DIR/$clean_path"
+
+              mkdir -p "$(dirname "$dest_file")"
+
+              cp "$file" "$dest_file"
+
+          done
+
+          cd "$BACKUP_DIR"
+
+          zip -r "../$ZIP_NAME" .
+
+          cd ..
+
+          echo "ZIP_FILE=$ZIP_NAME" >> "$GITHUB_ENV"
+
+          echo "Source backup created:"
+          echo "$ZIP_NAME"
+
+      # ---------------------------------------------------------
+      # 9. Upload source backup
+      # ---------------------------------------------------------
+      - name: Upload Source Code Backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: TayfNotes-SourceCode-Backup-${{ github.run_number }}
+          path: ${{ env.ZIP_FILE }}
+          if-no-files-found: error
+
+      # ---------------------------------------------------------
+      # 10. Build summary
+      # ---------------------------------------------------------
+      - name: Build Summary
+        run: |
+          echo "========================================"
+          echo "BUILD SUCCESSFUL"
+          echo "========================================"
+          echo "Application : TayfNotes"
+          echo "Build       : ${{ github.run_number }}"
+          echo "Commit      : ${{ github.sha }}"
+          echo ""
+          echo "APK:"
+          find app/build/outputs/apk/debug -maxdepth 1 -type f -name "*.apk" -print
+          echo "========================================"
