@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +32,10 @@ fun SettingsScreen(
     isDarkMode: Boolean?,
     onDarkModeChanged: (Boolean?) -> Unit,
     isBiometricEnabled: Boolean,
-    onBiometricToggle: (Boolean) -> Unit
+    onBiometricToggle: (Boolean) -> Unit,
+    activeCloudProvider: String?,
+    onCloudProviderSelected: (String?) -> Unit,
+    onFullBackupClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -49,13 +54,46 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            item { SettingCategory("Çevrimiçi Senkronizasyon") }
+            item { SettingCategory("Bulut Yedekleme ve Senkronizasyon") }
+            item {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Senkronizasyon Sağlayıcısı", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = activeCloudProvider == null,
+                            onClick = { onCloudProviderSelected(null) },
+                            label = { Text("Kapalı") }
+                        )
+                        FilterChip(
+                            selected = activeCloudProvider == "Google Drive",
+                            onClick = { onCloudProviderSelected("Google Drive") },
+                            label = { Text("Google Drive") }
+                        )
+                        FilterChip(
+                            selected = activeCloudProvider == "Dropbox",
+                            onClick = { onCloudProviderSelected("Dropbox") },
+                            label = { Text("Dropbox") }
+                        )
+                    }
+                }
+            }
+            
             item { 
                 SettingItem(
-                    title = "Çevrimiçi yedekleme", 
-                    subtitle = if (isSyncing) "Senkronize ediliyor..." else "Tayfun Yamak",
+                    title = "Şimdi Senkronize Et", 
+                    subtitle = if (isSyncing) "Senkronize ediliyor..." else (activeCloudProvider ?: "Sağlayıcı seçilmedi"),
                     onClick = onSyncClick
                 ) 
+            }
+
+            item { SettingCategory("Veri Taşıma (Migration)") }
+            item {
+                SettingItem(
+                    title = "Tüm Veriyi Yedekle ve Paylaş",
+                    subtitle = "Medya dosyaları ve veritabanını tek paket yap",
+                    onClick = onFullBackupClick
+                )
             }
             
             item { SettingCategory("Görünüm") }

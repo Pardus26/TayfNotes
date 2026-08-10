@@ -14,18 +14,23 @@ import com.eldora25.tayfnotes.data.repository.FolderRepository
 import com.eldora25.tayfnotes.data.repository.NoteRepository
 import com.eldora25.tayfnotes.shared.model.Folder
 import com.eldora25.tayfnotes.shared.model.Note
+import com.eldora25.tayfnotes.shared.sync.CloudProvider
+import com.eldora25.tayfnotes.shared.sync.DropboxProvider
+import com.eldora25.tayfnotes.shared.sync.GoogleDriveProvider
 import com.eldora25.tayfnotes.shared.sync.SyncManager
 import com.eldora25.tayfnotes.ui.theme.TayfTheme
+import com.eldora25.tayfnotes.util.BackupPackageHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class NoteViewModel(
-    application: Application,
+    private val application: Application,
     private val noteRepository: NoteRepository,
     private val folderRepository: FolderRepository
 ) : AndroidViewModel(application) {
@@ -37,6 +42,7 @@ class NoteViewModel(
     private val THEME_KEY = stringPreferencesKey("app_theme")
     private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
     private val BIOMETRIC_KEY = booleanPreferencesKey("biometric_lock")
+    private val CLOUD_PROVIDER_KEY = stringPreferencesKey("cloud_provider")
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
@@ -60,6 +66,10 @@ class NoteViewModel(
     val isBiometricEnabled: StateFlow<Boolean> = dataStore.data
         .map { pref -> pref[BIOMETRIC_KEY] ?: false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val activeCloudProvider: StateFlow<String?> = dataStore.data
+        .map { pref -> pref[CLOUD_PROVIDER_KEY] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val allFolders: StateFlow<List<Folder>> = folderRepository.allFolders.stateIn(
         scope = viewModelScope,
@@ -112,6 +122,14 @@ class NoteViewModel(
         }
     }
 
+    fun setCloudProvider(providerName: String?) {
+        viewModelScope.launch {
+            dataStore.edit { 
+                if (providerName == null) it.remove(CLOUD_PROVIDER_KEY) else it[CLOUD_PROVIDER_KEY] = providerName 
+            }
+        }
+    }
+
     fun saveNote(note: Note) {
         viewModelScope.launch {
             noteRepository.insert(note.copy(lastModified = System.currentTimeMillis()))
@@ -139,10 +157,24 @@ class NoteViewModel(
     fun syncData() {
         viewModelScope.launch {
             _isSyncing.value = true
+            val provider = when(activeCloudProvider.value) {
+                "Google Drive" -> GoogleDriveProvider()
+                "Dropbox" -> DropboxProvider()
+                else -> null
+            }
+            syncManager.setProvider(provider)
             val currentNotes = notes.value
             syncManager.syncNotes(currentNotes)
             _isSyncing.value = false
         }
+    }
+
+    fun exportFullBackup(onSuccess: (File) -> Unit) {
+        BackupPackageHelper.createFullBackup(
+            application,
+            onComplete = { onSuccess(it) },
+            onError = { /* Log error */ }
+        )
     }
 }
 

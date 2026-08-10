@@ -3,11 +3,11 @@ package com.eldora25.tayfnotes
 import android.Manifest
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +28,7 @@ import com.eldora25.tayfnotes.ui.components.BottomNavigationBar
 import com.eldora25.tayfnotes.ui.theme.TayfNotesTheme
 import com.eldora25.tayfnotes.ui.viewmodel.NoteViewModel
 import com.eldora25.tayfnotes.ui.viewmodel.NoteViewModelFactory
+import com.eldora25.tayfnotes.util.BackupPackageHelper
 import com.eldora25.tayfnotes.util.BiometricHelper
 
 sealed class Screen {
@@ -67,9 +68,7 @@ class MainActivity : FragmentActivity() {
 
             val permissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
-            ) { permissions ->
-                // Basic logging
-            }
+            ) { /* Handle results */ }
 
             LaunchedEffect(Unit) {
                 permissionLauncher.launch(permissionsToRequest)
@@ -95,7 +94,7 @@ class MainActivity : FragmentActivity() {
                     MainAppContent()
                 } else {
                     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        // Empty or Splash for locked state
+                        // Locked State UI
                     }
                 }
             }
@@ -112,6 +111,7 @@ class MainActivity : FragmentActivity() {
         val currentTheme by noteViewModel.currentTheme.collectAsState()
         val isDarkModePref by noteViewModel.isDarkMode.collectAsState()
         val isBiometricEnabled by noteViewModel.isBiometricEnabled.collectAsState()
+        val activeCloudProvider by noteViewModel.activeCloudProvider.collectAsState()
         
         var showAddNoteDialog by remember { mutableStateOf(false) }
 
@@ -188,7 +188,14 @@ class MainActivity : FragmentActivity() {
                                 isDarkMode = isDarkModePref,
                                 onDarkModeChanged = { noteViewModel.setDarkMode(it) },
                                 isBiometricEnabled = isBiometricEnabled,
-                                onBiometricToggle = { noteViewModel.setBiometricEnabled(it) }
+                                onBiometricToggle = { noteViewModel.setBiometricEnabled(it) },
+                                activeCloudProvider = activeCloudProvider,
+                                onCloudProviderSelected = { noteViewModel.setCloudProvider(it) },
+                                onFullBackupClick = {
+                                    noteViewModel.exportFullBackup { file ->
+                                        BackupPackageHelper.shareBackup(this@MainActivity, file)
+                                    }
+                                }
                             )
                             else -> {}
                         }

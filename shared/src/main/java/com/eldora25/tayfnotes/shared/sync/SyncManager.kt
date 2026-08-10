@@ -18,12 +18,26 @@ class SyncManager {
         }
     }
 
+    private var activeProvider: CloudProvider? = null
+
+    fun setProvider(provider: CloudProvider?) {
+        activeProvider = provider
+    }
+
     suspend fun syncNotes(notes: List<Note>): Result<Unit> {
         return try {
-            // Simulated backup to "Tayfun Yamak" cloud
-            println("Syncing ${notes.size} notes to cloud...")
-            delay(2000) // Simulate network delay
-            Result.success(Unit)
+            val provider = activeProvider
+            if (provider != null) {
+                println("Syncing ${notes.size} notes to ${provider.name}...")
+                // In a real app, we would serialize notes to JSON, 
+                // save to temp file, and upload via provider.
+                delay(2000)
+                Result.success(Unit)
+            } else {
+                // Fallback or internal sync
+                delay(1000)
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

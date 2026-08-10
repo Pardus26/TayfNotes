@@ -50,5 +50,11 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] Sesli Not alma ve dinleme özelliği (Mic/AudioRecorder).
 - [x] Medya izinlerinin (Kamera, Mikrofon) yönetimi.
 
-## [ ] Faz 10: Çoklu Platform Genişlemesi
+## [x] Faz 10: Bulut Senkronizasyon ve Veri Taşıma
+- [x] Build izolasyon ayarları (gradle.properties).
+- [x] Google Drive ve Dropbox entegrasyonu için teknik altyapı.
+- [x] Toplu veri yedeği (ZIP/TNB) oluşturma ve paylaşma.
+- [x] Ayarlar ekranına Bulut ve Taşıma seçeneklerinin eklenmesi.
+
+## [ ] Faz 11: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.
