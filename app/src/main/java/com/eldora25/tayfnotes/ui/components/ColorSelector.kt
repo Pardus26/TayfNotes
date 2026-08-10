@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
-import com.eldora25.tayfnotes.ui.theme.NeonCapsule
+import com.eldora25.tayfnotes.ui.theme.NeonIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,9 +37,9 @@ fun ColorSelector(
 
     val bgColor = try { Color(android.graphics.Color.parseColor(selectedColorHex)) } catch(_: Exception) { Color.White }
 
-    // Madde 1: High Contrast Neon Capsule for Palette Icon
-    Box(modifier = Modifier.clickable { showSheet = true }) {
-        NeonCapsule(backgroundColor = bgColor) {
+    // Madde 1: High Contrast Neon Icon
+    IconButton(onClick = { showSheet = true }) {
+        NeonIcon(backgroundColor = bgColor) {
             Icon(
                 Icons.Default.Palette, 
                 contentDescription = "Renk Seç",

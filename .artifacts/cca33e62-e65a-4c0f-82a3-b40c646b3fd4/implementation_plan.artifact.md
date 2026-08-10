@@ -1,52 +1,49 @@
-# TayfNotes: Profesyonel Arayüz, Gerçek Senkronizasyon ve Gelişmiş Sketch Planı (v27)
+# TayfNotes: Teknik Mükemmellik ve Profesyonel Arayüz Planı (v28)
 
-Bu plan, TayfNotes'u görsel, fonksiyonel ve teknik olarak piyasadaki en üst düzey (Microsoft To Do, Procreate, Google Keep) standartlara taşımayı hedefler.
+Bu plan, uygulamanın görsel zırhını güçlendirmeyi, tablet ve telefonlarda Master-Detail yapısını kusursuzlaştırmayı ve multimedya/sketch özelliklerini profesyonel seviyeye taşımayı hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Gerçek Senkronizasyon:** Google Drive ve Dropbox için gerçek OAuth2 akışları ve kullanıcı kimlik yönetimi kurulacaktır.
-> **Master-Detail:** Hem dikey hem yatay modda Master-Detail (Liste-Detay) yapısı aktif edilecektir.
-> **Sürükle-Bırak:** Not ve klasör sıralaması manuel olarak (Reorderable) değiştirilebilecektir.
+> **Sürükle-Bırak:** Not ve klasör sıralaması artık manuel olarak (Drag-and-Drop) yapılabilecektir.
+> **Gerçek Senkronizasyon:** Dropbox ve Drive için gerçek kimlik doğrulama akışları (Auth) entegre edilecektir.
+> **Sketch Devrimi:** Çizimlerde her işlem değil, sadece "Bitti" denildiğinde tekil kayıt yapılacaktır.
 
 ## Proposed Changes
 
-### 1. Görsel Zırh ve Kontrast (Madde 1, 11)
-- [MODIFY] `ui/theme/Theme.kt`: İkon ve yazılara zıt renkli "Outline" ve Neon ışıltı (Glow) efektleri ekleyen bileşenler.
-- [NEW] `ui/ThemeSelectionScreen.kt`: Şık bir önizleme ile sadece tema ve karanlık modun seçildiği ekran.
+### 1. Görsel Zırh ve Neon İkonlar (Madde 1, 8)
+- [MODIFY] `ui/theme/Theme.kt`: Tüm üst menü ikonlarını zıt renkli kapsül ve **Neon Işıltısı** ile saran `NeonIcon` bileşeni.
+- [MODIFY] `ui/ThemeSelectionScreen.kt`: Her temanın renklerini kutucuklar halinde gösteren şık bir önizleme ızgarası.
 
-### 2. Akıllı Navigasyon ve Tablet Uyumu (Madde 2, 3, 4, 13)
-- [MODIFY] `MainActivity.kt`: Dikey ve yatay modda Master-Detail (Sol Liste, Sağ Detay) yapısının stabilizasyonu.
-- [MODIFY] `ui/MainScreen.kt`: Ana ekranda yatay dizilmiş, eşit büyüklükte 3 ana buton (Not, Liste, Sketch).
+### 2. Gelişmiş Navigasyon ve Master-Detail (Madde 2)
+- [MODIFY] `MainActivity.kt`: Dikey modda dahi 0.4f/0.6f oranında sol liste ve sağ boş/detay panel ayrımı. Not başlıklarının dar alana dinamik adaptasyonu.
 
-### 3. Sıralama ve Manuel Düzenleme (Madde 5, 6, 7, 8)
+### 3. Sürükle-Bırak ve Akıllı Sıralama (Madde 3, 4, 5)
 - [MODIFY] `ui/MainScreen.kt` & `ui/FoldersScreen.kt`:
-    - Sağ üst hamburger menü ile akıllı sıralama (Tarih, Alfabetik, Renk).
-    - `LazyColumn` üzerinde sürükle-bırak (Drag-and-Drop) ile manuel sıralama desteği.
+    - `reorderable` liste desteği ile manuel sıralama.
+    - Klasörler için sağ üst hamburger menü ve 4'lü sıralama (Tarih, Ad, Renk).
 
-### 4. Gelişmiş Sketch ve Tasarım (Madde 14, 15, 16, 18)
+### 4. Gelişmiş Sketch ve Tasarım (Madde 10, 11, 12, 14)
 - [MODIFY] `ui/components/DrawingCanvas.kt`:
-    - Tekil kayıt mantığı: Çizimin her aşaması değil, "Tamamla" denildiğinde tek bir veri olarak saklanması.
-    - Gelişmiş Renk Seçici: Sınır rengi ve dolgu rengi (Fill) ayrımı.
-    - Akıllı Şekiller: Kare, Daire, Elips, Yay, Dikdörtgen (Boyutlandırılabilir ve Taşınabilir).
-    - Fırça ve kalemlerde seçilen rengin anlık uygulanması.
+    - Tekil kayıt: Çizim bitmeden veritabanına kayıt yapılmayacak.
+    - Gerçek Renk: Kalem/Fırça seçiliyken renk değiştirme anlık ve kalıcı.
+    - Şekil Pro: Duvar (Stroke) ve İç (Fill) renklerinin bağımsız ayarlanması.
+    - Önizleme: Detay panelinde sketch çizimlerinin tam görünürlüğü.
 
-### 5. Veri Yönetimi ve Gerçek Bulut (Madde 9, 10, 12)
+### 5. Veri ve Senkronizasyon (Madde 6, 7, 9, 13)
 - [MODIFY] `ui/viewmodel/NoteViewModel.kt`:
-    - Çöp kutusuna taşıma ve kalıcı silme (onaylı) mantığı.
-    - Gerçek Google/Dropbox hesap bağlama ve benzersiz cihaz kimliği ile çift taraflı eşitleme.
-- [MODIFY] `shared/src/.../SyncManager.kt`: Gerçek ağ çağrıları ve API entegrasyonu.
-
-### 6. Multimedya ve Fixler (Madde 17)
-- [FIX] Ses kaydı esnasındaki "Error" veren izin ve kayıt başlatma hatası.
-- [FIX] Resimlerin ve Sketch'lerin önizleme/detay panelinde görünmeme sorunu.
+    - Çöp kutusu ve Arşiv mantığının veri silme yerine ID taşıma ile stabilizasyonu.
+    - Gerçek Bulut Senkronizasyonu için OAuth2 altyapısının aktif edilmesi.
+- [FIX] `AudioRecorder`: Ses kaydı hata kodlarının (Permission/Path) çözülmesi.
 
 ## Verification Plan
 
 ### Automated Verification
 - `./gradlew :app:assembleDebug` ile build kontrolü.
-- APK `TayfNotes_v01.27.apk` üretilecek.
+- APK `TayfNotes_v01.28.apk` üretilecek.
 
 ### Manual Verification
-- Maddelerin her biri (Sürükle-bırak, Renk dolgusu, Gerçek senkronizasyon vb.) tek tek test edilecek.
-- Tablette hem dikey hem yatay modda Master-Detail akışı kontrol edilecek.
+- Dikey modda sağ panelin boş kalıp not seçilince dolduğu görülecek.
+- Sketch ekranında bir daire çizilip iç dolgusunun değiştiği test edilecek.
+- Ses kaydı yapılıp hata almadan kaydedildiği görülecek.
+- Sürükle-bırak ile notların yerinin değiştiği doğrulanacak.

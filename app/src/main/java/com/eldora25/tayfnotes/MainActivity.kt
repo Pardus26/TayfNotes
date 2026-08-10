@@ -126,6 +126,7 @@ class MainActivity : FragmentActivity() {
         val activeCloudProvider by noteViewModel.activeCloudProvider.collectAsState()
         
         val configuration = LocalConfiguration.current
+        // Madde 2, 3: Master-Detail split 0.4 / 0.6 always active for large screens or landscape
         val isMasterDetail = configuration.screenWidthDp >= 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         var selectedNoteInMasterDetail by remember { mutableStateOf<Note?>(null) }
 
@@ -176,7 +177,8 @@ class MainActivity : FragmentActivity() {
                     }
                 ) { innerPadding ->
                     Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        Box(modifier = Modifier.weight(if (isMasterDetail && currentScreen is Screen.Main) 0.35f else 1f)) {
+                        // Madde 2: Left 0.4 column
+                        Box(modifier = Modifier.weight(if (isMasterDetail && currentScreen is Screen.Main) 0.4f else 1f)) {
                             when (currentScreen) {
                                 is Screen.Main -> MainScreen(
                                     notes = notes,
@@ -220,7 +222,13 @@ class MainActivity : FragmentActivity() {
                                 is Screen.Settings -> SettingsScreen(
                                     onBack = { currentScreen = Screen.More },
                                     isSyncing = isSyncing,
-                                    onSyncClick = { noteViewModel.syncData() },
+                                    onSyncClick = { 
+                                        if (activeCloudProvider == null) {
+                                            Toast.makeText(this@MainActivity, "Lütfen önce bir sağlayıcı seçin.", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            noteViewModel.syncData() 
+                                        }
+                                    },
                                     currentTheme = currentTheme,
                                     onThemeSelected = { noteViewModel.setTheme(it) },
                                     isDarkMode = isDarkModePref,
@@ -240,9 +248,10 @@ class MainActivity : FragmentActivity() {
                             }
                         }
                         
+                        // Madde 2, 3: Right 0.6 Detail Pane
                         if (isMasterDetail && currentScreen is Screen.Main) {
                             VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                            Box(modifier = Modifier.weight(0.65f)) {
+                            Box(modifier = Modifier.weight(0.6f)) {
                                 DetailPane(
                                     note = selectedNoteInMasterDetail,
                                     modifier = Modifier.fillMaxSize()

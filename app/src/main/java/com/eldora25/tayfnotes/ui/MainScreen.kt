@@ -3,6 +3,7 @@ package com.eldora25.tayfnotes.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,7 +22,7 @@ import com.eldora25.tayfnotes.BuildConfig
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.components.NoteGridItem
 
-enum class SortType { DATE_MODIFIED, DATE_CREATED, ALPHABETICAL, COLOR }
+enum class SortType { DATE_MODIFIED, DATE_CREATED, ALPHABETICAL, COLOR, MANUAL }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,21 +33,20 @@ fun MainScreen(
     onAddNote: () -> Unit,
     onAddChecklist: () -> Unit,
     onAddSketch: () -> Unit,
-    onEditNote: (Note) -> Unit
+    onEditNote: (Note) -> Unit,
+    onMoveNote: (Int, Int) -> Unit = { _, _ -> }
 ) {
     var isSearchActive by remember { mutableStateOf(false) }
     var sortType by remember { mutableStateOf(SortType.DATE_MODIFIED) }
     var showSortMenu by remember { mutableStateOf(false) }
     
-    val configuration = LocalConfiguration.current
-    val isPortrait = configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
-
     val sortedNotes = remember(notes, sortType) {
         when (sortType) {
             SortType.DATE_MODIFIED -> notes.sortedByDescending { it.lastModified }
             SortType.DATE_CREATED -> notes.sortedByDescending { it.createdAt }
             SortType.ALPHABETICAL -> notes.sortedBy { it.title.lowercase() }
             SortType.COLOR -> notes.sortedBy { it.colorHex }
+            SortType.MANUAL -> notes
         }
     }
 
@@ -103,10 +103,49 @@ fun MainScreen(
                                 DropdownMenuItem(text = { Text("Oluşturulma Zamanı") }, onClick = { sortType = SortType.DATE_CREATED; showSortMenu = false })
                                 DropdownMenuItem(text = { Text("Alfabetik") }, onClick = { sortType = SortType.ALPHABETICAL; showSortMenu = false })
                                 DropdownMenuItem(text = { Text("Renge Göre") }, onClick = { sortType = SortType.COLOR; showSortMenu = false })
+                                DropdownMenuItem(text = { Text("Manuel (Sürükle)") }, onClick = { sortType = SortType.MANUAL; showSortMenu = false })
                             }
                         }
                     }
                 )
+            }
+        },
+        bottomBar = {
+            // Madde 13: Three equal horizontal buttons at bottom
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .navigationBarsPadding(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AddActionButton(
+                        icon = Icons.Default.Description,
+                        label = "Not",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        onClick = onAddNote
+                    )
+                    AddActionButton(
+                        icon = Icons.Default.Checklist,
+                        label = "Liste",
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                        onClick = onAddChecklist
+                    )
+                    AddActionButton(
+                        icon = Icons.Default.Gesture,
+                        label = "Sketch",
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.weight(1f),
+                        onClick = onAddSketch
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -115,46 +154,16 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Madde 13: Three equal horizontal buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AddActionButton(
-                    icon = Icons.Default.Description,
-                    label = "Not",
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.weight(1f),
-                    onClick = onAddNote
-                )
-                AddActionButton(
-                    icon = Icons.Default.Checklist,
-                    label = "Liste",
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.weight(1f),
-                    onClick = onAddChecklist
-                )
-                AddActionButton(
-                    icon = Icons.Default.Gesture,
-                    label = "Sketch",
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    modifier = Modifier.weight(1f),
-                    onClick = onAddSketch
-                )
-            }
-
             // Madde 2, 3, 4: Single column list
             if (sortedNotes.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(if (searchQuery.isEmpty()) "Henüz not yok." else "Sonuç bulunamadı.", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().weight(1f),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(sortedNotes, key = { it.id }) { note ->
                         NoteGridItem(
@@ -178,17 +187,16 @@ fun AddActionButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(56.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(50.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = color, 
             contentColor = if (color.luminance() > 0.5f) Color.Black else Color.White
-        )
+        ),
+        contentPadding = PaddingValues(0.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge)
-        }
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium)
     }
 }

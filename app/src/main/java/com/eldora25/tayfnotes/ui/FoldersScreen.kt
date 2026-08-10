@@ -98,6 +98,7 @@ fun FoldersScreen(
                         DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                             DropdownMenuItem(text = { Text("Alfabetik") }, onClick = { sortType = SortType.ALPHABETICAL; showSortMenu = false })
                             DropdownMenuItem(text = { Text("Renge Göre") }, onClick = { sortType = SortType.COLOR; showSortMenu = false })
+                            DropdownMenuItem(text = { Text("Manuel (Sürükle)") }, onClick = { sortType = SortType.MANUAL; showSortMenu = false })
                         }
                     }
                 }

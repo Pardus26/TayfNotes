@@ -16,9 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.eldora25.tayfnotes.ui.theme.TayfTheme
+import com.eldora25.tayfnotes.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +47,7 @@ fun ThemeSelectionScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text("Mod Seçimi", style = MaterialTheme.typography.titleMedium)
+            Text("Arayüz Modu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -60,7 +60,7 @@ fun ThemeSelectionScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Renk Paleti", style = MaterialTheme.typography.titleMedium)
+            Text("Renk Paleti Önizleme", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             
             LazyVerticalGrid(
@@ -90,7 +90,7 @@ fun ModeButton(label: String, isSelected: Boolean, modifier: Modifier, onClick: 
             containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
             contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Text(label, maxLines = 1)
     }
@@ -98,22 +98,40 @@ fun ModeButton(label: String, isSelected: Boolean, modifier: Modifier, onClick: 
 
 @Composable
 fun ThemePreviewCard(theme: TayfTheme, isSelected: Boolean, onClick: () -> Unit) {
+    val themeColor = when(theme) {
+        TayfTheme.MIDNIGHT -> PremiumGold
+        TayfTheme.SUNSET -> SunsetPrimary
+        TayfTheme.FOREST -> ForestPrimary
+        TayfTheme.OCEAN -> OceanPrimary
+        TayfTheme.LAVENDER -> LavenderPrimary
+        TayfTheme.ROSE -> RosePrimary
+        TayfTheme.SLATE -> SlatePrimary
+        TayfTheme.EMERALD -> EmeraldPrimary
+        TayfTheme.ROYAL -> RoyalPrimary
+        TayfTheme.CRIMSON -> CrimsonPrimary
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .border(if (isSelected) 2.dp else 0.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
-        shape = RoundedCornerShape(12.dp)
+            .border(if (isSelected) 3.dp else 0.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color.Gray) // Placeholder for theme color logic or use a static map
+                    .background(themeColor)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(theme.name, style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = theme.name.lowercase().replaceFirstChar { it.uppercase() }, 
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
         }
     }
 }

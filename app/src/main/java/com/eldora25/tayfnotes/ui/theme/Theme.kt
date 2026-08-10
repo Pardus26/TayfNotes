@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -30,22 +29,23 @@ fun Color.contentColor(): Color {
 }
 
 /**
- * Neon Glow Capsule for important icons (Like the Color Palette)
+ * Neon Glow Capsule for icons to ensure visibility on any background
  */
 @Composable
-fun NeonCapsule(
+fun NeonIcon(
     backgroundColor: Color,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val contrastColor = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
-    val neonColor = if (backgroundColor.luminance() > 0.5f) Color.Blue else Color.Yellow
+    val neonColor = if (backgroundColor.luminance() > 0.5f) Color.Blue.copy(alpha = 0.6f) else Color.Yellow.copy(alpha = 0.6f)
     
     Box(
-        modifier = Modifier
-            .shadow(elevation = 12.dp, shape = CircleShape, ambientColor = neonColor, spotColor = neonColor)
+        modifier = modifier
+            .shadow(elevation = 10.dp, shape = CircleShape, ambientColor = neonColor, spotColor = neonColor)
             .background(backgroundColor, CircleShape)
-            .border(2.dp, contrastColor.copy(alpha = 0.8f), CircleShape)
-            .padding(10.dp)
+            .border(2.dp, contrastColor.copy(alpha = 0.7f), CircleShape)
+            .padding(8.dp)
     ) {
         content()
     }

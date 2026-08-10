@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.ui.theme.NeonIcon
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -72,8 +73,8 @@ fun DrawingCanvas(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-            tonalElevation = 4.dp
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+            tonalElevation = 6.dp
         ) {
             Column {
                 Row(
@@ -93,9 +94,14 @@ fun DrawingCanvas(
                     IconButton(onClick = { showShapePicker = true }) {
                         Icon(Icons.Default.Category, contentDescription = "Şekiller", tint = if (currentTool == ToolType.SHAPE) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
-                    IconButton(onClick = { showColorPicker = true }) {
-                        Icon(Icons.Default.ColorLens, contentDescription = "Renk", tint = currentColor)
+                    
+                    // Madde 1: Neon Colored Picker
+                    Box(modifier = Modifier.clickable { showColorPicker = true }) {
+                        NeonIcon(backgroundColor = currentColor, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.ColorLens, contentDescription = null, tint = if (currentColor.luminance() > 0.5f) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+                        }
                     }
+
                     IconButton(onClick = { 
                         paths = emptyList()
                         currentPathPoints.clear()
@@ -110,7 +116,7 @@ fun DrawingCanvas(
                     Slider(
                         value = currentStrokeWidth,
                         onValueChange = { currentStrokeWidth = it },
-                        valueRange = 1f..100f, // Expanded range
+                        valueRange = 1f..100f,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                     )
                     Text("${currentStrokeWidth.toInt()}", style = MaterialTheme.typography.labelSmall)
@@ -150,6 +156,7 @@ fun DrawingCanvas(
                                 )
                                 paths = paths + newPath
                                 currentPathPoints.clear()
+                                // Madde 10: Logic to only notify change when finished or periodically
                                 onDataChanged(Json.encodeToString(paths))
                             }
                         }
@@ -238,6 +245,10 @@ fun DrawingCanvas(
             confirmButton = {}
         )
     }
+}
+
+private fun Color.luminance(): Float {
+    return (0.2126f * red + 0.7152f * green + 0.0722f * blue)
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPath: DrawPath) {

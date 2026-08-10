@@ -1,21 +1,21 @@
 # TayfNotes Hibrit Geliştirme Yol Haritası (Android Öncelikli)
 
-Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çoklu platform desteğine zemin hazırlayarak ilerlemeyi hedefler.
-
 ## [x] Faz 2-11: Temel Özellikler ve Tablet Master-Detail
 - [x] Master-Detail Tablet Layout ve Sketch (Çizim) temelleri.
 
-## [/] Faz 12: Profesyonel Gelişim ve Teknik Devrim (v27)
-- [/] Madde 1: İkon ve metinlere zıt renkli "Outline" ve Neon ışıltısı eklenmesi.
-- [ ] Madde 2-4: Dikey/Yatay modda tek sütunlu Master-Detail (Sol Liste, Sağ Detay) yapısı.
-- [ ] Madde 5-8: Notlar ve Klasörler için Akıllı Sıralama ve Sürükle-Bırak (Drag-and-Drop).
-- [ ] Madde 9-10: Çöp Kutusu ve Arşiv: Taşınma ve Onaylı Kalıcı Silme.
-- [ ] Madde 11: Şık Tema Seçim Ekranı ve Önizleme.
-- [ ] Madde 12: Gerçek Bulut Senkronizasyonu (Drive & Dropbox OAuth2).
-- [ ] Madde 13: Ana ekranda eşit büyüklükte 3 ana buton (Not, Liste, Sketch).
-- [ ] Madde 14-16, 18: Gelişmiş Sketch: Tekil kayıt, Gerçek renk/dolgu/gölge ve otomatik şekiller.
-- [ ] Madde 17: Ses kaydı hatasının (Permission/Recorder) giderilmesi.
-- [ ] Medya: Resim ve Sketch'lerin detay panelinde görünürlüğünün sağlanması.
+## [/] Faz 12: Profesyonel Gelişim ve Teknik Devrim (v28)
+- [/] Madde 1: Not editörü ikonlarına zıt renkli Kapsül ve **Neon Işıltısı** eklenmesi.
+- [ ] Madde 2: Dikey modda 0.4 (Liste) / 0.6 (Boş/Detay) panel ayrımı.
+- [ ] Madde 3, 5: Notlar ve Klasörler için Sürükle-Bırak (Drag-and-Drop) desteği.
+- [ ] Madde 4: Klasörler için sağ üst hamburger menü ve sıralama seçenekleri.
+- [ ] Madde 6, 7: Çöp Kutusu: Silme butonunun taşınması ve onaylı kalıcı silme.
+- [ ] Madde 8: Tema Seçim ekranında renk önizlemelerinin eklenmesi.
+- [ ] Madde 9: Gerçek Bulut Senkronizasyonu (Google Drive & Dropbox OAuth2).
+- [ ] Madde 10: Sketch: Sadece "Tamam" denildiğinde tek döküman olarak kayıt.
+- [ ] Madde 11: Sketch: Kalem/Fırça renginin seçili renkte kalıcı olması.
+- [ ] Madde 12, 14: Sketch: Şekil kenar ve iç dolgu renginin bağımsız ayarlanması.
+- [ ] Madde 13: Ses kaydı "Hata" mesajının ve donma sorununun giderilmesi.
+- [ ] Medya: Resim/Sketch'lerin detay panelinde anlık görünürlüğü.
 
 ## [ ] Faz 13: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.

@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +35,7 @@ import com.eldora25.tayfnotes.shared.model.NoteType
 import com.eldora25.tayfnotes.ui.components.ChecklistEditor
 import com.eldora25.tayfnotes.ui.components.ColorSelector
 import com.eldora25.tayfnotes.ui.components.DrawingCanvas
+import com.eldora25.tayfnotes.ui.theme.NeonIcon
 import com.eldora25.tayfnotes.util.AudioRecorder
 import com.eldora25.tayfnotes.util.FileExportHelper
 import kotlinx.coroutines.delay
@@ -54,6 +56,8 @@ fun NoteEditorScreen(
     onDelete: (Note) -> Unit
 ) {
     val context = LocalContext.current
+    val noteId = remember { note?.id ?: System.currentTimeMillis().toString() }
+    
     var title by remember { mutableStateOf(note?.title ?: "") }
     var content by remember { mutableStateOf(note?.content ?: "") }
     var colorHex by remember { mutableStateOf(note?.colorHex ?: "#FFFFFF") }
@@ -71,7 +75,7 @@ fun NoteEditorScreen(
     var checklistItems by remember { mutableStateOf(initialItems) }
 
     var isPreviewMode by remember { mutableStateOf(false) }
-    var isSketchMode by remember { mutableStateOf(initialSketch || (note?.sketchData != null)) }
+    var isSketchMode by remember { mutableStateOf(initialSketch || (sketchData != null)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     
@@ -88,6 +92,7 @@ fun NoteEditorScreen(
         uri?.let { imageUris = imageUris + it.toString() }
     }
 
+    // Auto-save logic - FIXED Madde 10: Uses persistent noteId
     LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId, imageUris, audioPath, checklistItems, sketchData) {
         if (title.isNotEmpty() || content.isNotEmpty() || imageUris.isNotEmpty() || audioPath != null || checklistItems.isNotEmpty() || sketchData != null) {
             delay(1000)
@@ -108,15 +113,12 @@ fun NoteEditorScreen(
                 }
             }
 
-            val finalNote = (note ?: Note(
-                id = note?.id ?: System.currentTimeMillis().toString(),
-                title = finalTitle,
-                content = finalContent,
-                type = if (checklistItems.isNotEmpty()) NoteType.CHECKLIST else NoteType.TEXT
-            )).copy(
+            val finalNote = Note(
+                id = noteId,
                 title = finalTitle,
                 content = finalContent,
                 colorHex = colorHex,
+                type = if (checklistItems.isNotEmpty()) NoteType.CHECKLIST else NoteType.TEXT,
                 reminderTimestamp = reminderTimestamp,
                 folderId = folderId,
                 imageUris = imageUris,
@@ -131,37 +133,81 @@ fun NoteEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (note == null) "Yeni Ekle" else "Düzenle") },
+                title = { 
+                    Text(
+                        if (note == null) "Yeni Ekle" else "Düzenle",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) { 
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
+                        NeonIcon(backgroundColor = backgroundColor) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
-                    IconButton(onClick = {
-                        if (!isRecording) {
-                            val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
-                            audioPath = file.absolutePath
-                            try {
-                                recorder.startRecording(file)
-                                isRecording = true
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "Ses kaydı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (!isSketchMode) {
+                        IconButton(onClick = { isSketchMode = true }) {
+                            NeonIcon(backgroundColor = backgroundColor) {
+                                Icon(Icons.Default.Gesture, contentDescription = "Sketch")
                             }
-                        } else { recorder.stopRecording(); isRecording = false }
-                    }) {
-                        Icon(if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, contentDescription = "Ses", tint = if (isRecording) Color.Red else LocalContentColor.current)
+                        }
+                        IconButton(onClick = { galleryLauncher.launch("image/*") }) {
+                            NeonIcon(backgroundColor = backgroundColor) {
+                                Icon(Icons.Default.Image, contentDescription = "Resim")
+                            }
+                        }
+                        IconButton(onClick = {
+                            if (!isRecording) {
+                                val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
+                                audioPath = file.absolutePath
+                                try {
+                                    recorder.startRecording(file)
+                                    isRecording = true
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Ses kaydı hatası", Toast.LENGTH_SHORT).show()
+                                }
+                            } else { 
+                                recorder.stopRecording()
+                                isRecording = false 
+                            }
+                        }) {
+                            NeonIcon(backgroundColor = backgroundColor) {
+                                Icon(
+                                    if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, 
+                                    contentDescription = "Ses", 
+                                    tint = if (isRecording) Color.Red else LocalContentColor.current
+                                )
+                            }
+                        }
+                        IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
+                            NeonIcon(backgroundColor = backgroundColor) {
+                                Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
+                            }
+                        }
+                        if (note != null) {
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                NeonIcon(backgroundColor = backgroundColor) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Sil")
+                                }
+                            }
+                        }
+                    } else {
+                        IconButton(onClick = { isSketchMode = false }) {
+                            NeonIcon(backgroundColor = backgroundColor) {
+                                Icon(Icons.Default.TextFields, contentDescription = "Metin Modu")
+                            }
+                        }
                     }
-                    IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
-                        Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
+                    IconButton(onClick = onBack) {
+                        NeonIcon(backgroundColor = backgroundColor) {
+                            Icon(Icons.Default.Check, contentDescription = "Bitti")
+                        }
                     }
-                    if (note != null) {
-                        IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
-                    }
-                    IconButton(onClick = onBack) { Icon(Icons.Default.Check, contentDescription = "Bitti") }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.8f))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.9f))
             )
         }
     ) { paddingValues ->
@@ -205,7 +251,6 @@ fun NoteEditorScreen(
                         initialData = sketchData,
                         onDataChanged = { sketchData = it }
                     )
-                    // Extra note for sketch
                     TextField(
                         value = content,
                         onValueChange = { content = it },
@@ -240,7 +285,15 @@ fun NoteEditorScreen(
             } else {
                 // Preview Mode
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-                    Text(title.ifEmpty { "Başlıksız Not" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    val displayTitle = if (title.isEmpty() && checklistItems.isNotEmpty()) {
+                        checklistItems.firstOrNull()?.text ?: "Başlıksız Not"
+                    } else if (title.isEmpty()) {
+                        "Başlıksız Not"
+                    } else {
+                        title
+                    }
+                    
+                    Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     if (checklistItems.isNotEmpty()) {
                         checklistItems.forEach { item ->
@@ -254,7 +307,7 @@ fun NoteEditorScreen(
                     }
                     if (sketchData?.isNotEmpty() == true) {
                         Spacer(modifier = Modifier.height(24.dp))
-                        Text("Çizim İçeriyor (Görüntülemek için Sketch moduna geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        Text("Çizim İçeriyor (Düzenlemek için Sketch moduna geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     }
                     imageUris.forEach { uri ->
                         AsyncImage(model = uri, contentDescription = null, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.FillWidth)
@@ -262,5 +315,22 @@ fun NoteEditorScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteDialog && note != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Notu Sil") },
+            text = { Text("Bu notu silmek istediğinize emin misiniz?") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    onDelete(note)
+                    showDeleteDialog = false
+                }) { Text("Sil", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Vazgeç") }
+            }
+        )
     }
 }

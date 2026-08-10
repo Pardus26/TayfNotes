@@ -36,7 +36,7 @@ class AudioRecorder(private val context: Context) {
         try {
             recorder?.stop()
         } catch (e: Exception) {
-            // Log error
+            // Log or ignore if stop fails (common if recording was too short)
         } finally {
             recorder?.release()
             recorder = null
