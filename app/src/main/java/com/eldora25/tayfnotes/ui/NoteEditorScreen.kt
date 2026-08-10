@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -37,13 +36,10 @@ import com.eldora25.tayfnotes.ui.components.ColorSelector
 import com.eldora25.tayfnotes.ui.components.DrawingCanvas
 import com.eldora25.tayfnotes.ui.theme.NeonIcon
 import com.eldora25.tayfnotes.util.AudioRecorder
-import com.eldora25.tayfnotes.util.FileExportHelper
 import kotlinx.coroutines.delay
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,281 +52,595 @@ fun NoteEditorScreen(
     onDelete: (Note) -> Unit
 ) {
     val context = LocalContext.current
-    val noteId = remember { note?.id ?: System.currentTimeMillis().toString() }
-    
-    var title by remember { mutableStateOf(note?.title ?: "") }
-    var content by remember { mutableStateOf(note?.content ?: "") }
-    var colorHex by remember { mutableStateOf(note?.colorHex ?: "#FFFFFF") }
-    var reminderTimestamp by remember { mutableStateOf(note?.reminderTimestamp) }
-    var folderId by remember { mutableStateOf(note?.folderId) }
-    var imageUris by remember { mutableStateOf(note?.imageUris ?: emptyList()) }
-    var audioPath by remember { mutableStateOf(note?.audioPath) }
-    var sketchData by remember { mutableStateOf(note?.sketchData) }
-    
+
+    val noteId = remember {
+        note?.id ?: System.currentTimeMillis().toString()
+    }
+
+    var title by remember {
+        mutableStateOf(note?.title ?: "")
+    }
+
+    var content by remember {
+        mutableStateOf(note?.content ?: "")
+    }
+
+    var colorHex by remember {
+        mutableStateOf(note?.colorHex ?: "#FFFFFF")
+    }
+
+    var reminderTimestamp by remember {
+        mutableStateOf(note?.reminderTimestamp)
+    }
+
+    var folderId by remember {
+        mutableStateOf(note?.folderId)
+    }
+
+    /*
+     * Images attached to the normal note.
+     *
+     * These are intentionally separate from Sketch images.
+     */
+    var imageUris by remember {
+        mutableStateOf(
+            note?.imageUris ?: emptyList()
+        )
+    }
+
+    /*
+     * Temporary URI returned from the Sketch image picker.
+     *
+     * DrawingCanvas consumes this URI and stores it inside
+     * SketchDocument.
+     */
+    var pendingSketchImageUri by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var audioPath by remember {
+        mutableStateOf(note?.audioPath)
+    }
+
+    var sketchData by remember {
+        mutableStateOf(note?.sketchData)
+    }
+
     val initialItems = remember(note) {
-        if (note?.type == NoteType.CHECKLIST && note.content.isNotEmpty()) {
-            try { Json.decodeFromString<List<ChecklistItem>>(note.content) } catch(e: Exception) { emptyList() }
-        } else emptyList()
-    }
-    var checklistItems by remember { mutableStateOf(initialItems) }
 
-    var isPreviewMode by remember { mutableStateOf(false) }
-    var isSketchMode by remember { mutableStateOf(initialSketch || (sketchData != null)) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showFolderMenu by remember { mutableStateOf(false) }
-    
-    val recorder = remember { AudioRecorder(context) }
-    var isRecording by remember { mutableStateOf(false) }
+        if (
+            note?.type == NoteType.CHECKLIST &&
+            note.content.isNotEmpty()
+        ) {
 
-    val backgroundColor = try {
-        Color(android.graphics.Color.parseColor(colorHex))
-    } catch (e: Exception) {
-        MaterialTheme.colorScheme.surface
-    }
+            try {
+                Json.decodeFromString<List<ChecklistItem>>(
+                    note.content
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { imageUris = imageUris + it.toString() }
+        } else {
+            emptyList()
+        }
     }
 
-    // Auto-save logic - FIXED Madde 10: Uses persistent noteId
-    LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId, imageUris, audioPath, checklistItems, sketchData) {
-        if (title.isNotEmpty() || content.isNotEmpty() || imageUris.isNotEmpty() || audioPath != null || checklistItems.isNotEmpty() || sketchData != null) {
+    var checklistItems by remember {
+        mutableStateOf(initialItems)
+    }
+
+    var isPreviewMode by remember {
+        mutableStateOf(false)
+    }
+
+    var isSketchMode by remember {
+        mutableStateOf(
+            initialSketch ||
+                sketchData != null
+        )
+    }
+
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var showFolderMenu by remember {
+        mutableStateOf(false)
+    }
+
+    val recorder = remember {
+        AudioRecorder(context)
+    }
+
+    var isRecording by remember {
+        mutableStateOf(false)
+    }
+
+    val backgroundColor =
+        try {
+            Color(
+                android.graphics.Color.parseColor(
+                    colorHex
+                )
+            )
+        } catch (_: Exception) {
+            MaterialTheme.colorScheme.surface
+        }
+
+    /*
+     * ------------------------------------------------------------
+     * NORMAL NOTE IMAGE PICKER
+     * ------------------------------------------------------------
+     */
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
+
+            uri?.let {
+                imageUris =
+                    imageUris + it.toString()
+            }
+        }
+
+    /*
+     * ------------------------------------------------------------
+     * SKETCH IMAGE PICKER
+     * ------------------------------------------------------------
+     */
+    val sketchGalleryLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
+
+            uri?.let {
+                pendingSketchImageUri =
+                    it.toString()
+            }
+        }
+
+    /*
+     * ------------------------------------------------------------
+     * AUTO SAVE
+     * ------------------------------------------------------------
+     */
+    LaunchedEffect(
+        title,
+        content,
+        colorHex,
+        reminderTimestamp,
+        folderId,
+        imageUris,
+        audioPath,
+        checklistItems,
+        sketchData
+    ) {
+
+        if (
+            title.isNotEmpty() ||
+            content.isNotEmpty() ||
+            imageUris.isNotEmpty() ||
+            audioPath != null ||
+            checklistItems.isNotEmpty() ||
+            sketchData != null
+        ) {
+
             delay(1000)
-            
+
             var finalContent = content
+
             if (checklistItems.isNotEmpty()) {
-                finalContent = Json.encodeToString(checklistItems)
+                finalContent =
+                    Json.encodeToString(
+                        checklistItems
+                    )
             }
 
             var finalTitle = title
+
             if (finalTitle.isEmpty()) {
-                val textForTitle = if (checklistItems.isNotEmpty()) {
-                    checklistItems.firstOrNull()?.text ?: ""
-                } else content
-                
+
+                val textForTitle =
+                    if (checklistItems.isNotEmpty()) {
+
+                        checklistItems
+                            .firstOrNull()
+                            ?.text
+                            ?: ""
+
+                    } else {
+                        content
+                    }
+
                 if (textForTitle.isNotEmpty()) {
-                    finalTitle = textForTitle.trim().split("\\s+".toRegex()).take(5).joinToString(" ")
+
+                    finalTitle =
+                        textForTitle
+                            .trim()
+                            .split("\\s+".toRegex())
+                            .take(5)
+                            .joinToString(" ")
                 }
             }
 
-            val finalNote = Note(
-                id = noteId,
-                title = finalTitle,
-                content = finalContent,
-                colorHex = colorHex,
-                type = if (checklistItems.isNotEmpty()) NoteType.CHECKLIST else NoteType.TEXT,
-                reminderTimestamp = reminderTimestamp,
-                folderId = folderId,
-                imageUris = imageUris,
-                audioPath = audioPath,
-                sketchData = sketchData,
-                lastModified = System.currentTimeMillis()
-            )
+            val finalNote =
+                Note(
+                    id = noteId,
+                    title = finalTitle,
+                    content = finalContent,
+                    colorHex = colorHex,
+                    type =
+                        if (checklistItems.isNotEmpty()) {
+                            NoteType.CHECKLIST
+                        } else {
+                            NoteType.TEXT
+                        },
+                    reminderTimestamp =
+                        reminderTimestamp,
+                    folderId = folderId,
+                    imageUris = imageUris,
+                    audioPath = audioPath,
+                    sketchData = sketchData,
+                    lastModified =
+                        System.currentTimeMillis()
+                )
+
             onSave(finalNote)
         }
     }
 
     Scaffold(
+
         topBar = {
+
             TopAppBar(
-                title = { 
+
+                title = {
+
                     Text(
-                        if (note == null) "Yeni Ekle" else "Düzenle",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    ) 
+                        if (note == null) {
+                            "Yeni Ekle"
+                        } else {
+                            "Düzenle"
+                        },
+                        style =
+                            MaterialTheme.typography.titleMedium,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
                 },
+
                 navigationIcon = {
-                    IconButton(onClick = onBack) { 
-                        NeonIcon(backgroundColor = backgroundColor) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
+
+                    IconButton(
+                        onClick = onBack
+                    ) {
+
+                        NeonIcon(
+                            backgroundColor =
+                                backgroundColor
+                        ) {
+
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Geri"
+                            )
                         }
                     }
                 },
+
                 actions = {
+
                     if (!isSketchMode) {
-                        IconButton(onClick = { isSketchMode = true }) {
-                            NeonIcon(backgroundColor = backgroundColor) {
-                                Icon(Icons.Default.Gesture, contentDescription = "Sketch")
+
+                        /*
+                         * Enter Sketch mode.
+                         */
+                        IconButton(
+                            onClick = {
+                                isSketchMode = true
                             }
-                        }
-                        IconButton(onClick = { galleryLauncher.launch("image/*") }) {
-                            NeonIcon(backgroundColor = backgroundColor) {
-                                Icon(Icons.Default.Image, contentDescription = "Resim")
-                            }
-                        }
-                        IconButton(onClick = {
-                            if (!isRecording) {
-                                val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
-                                audioPath = file.absolutePath
-                                try {
-                                    recorder.startRecording(file)
-                                    isRecording = true
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Ses kaydı hatası", Toast.LENGTH_SHORT).show()
-                                }
-                            } else { 
-                                recorder.stopRecording()
-                                isRecording = false 
-                            }
-                        }) {
-                            NeonIcon(backgroundColor = backgroundColor) {
+                        ) {
+
+                            NeonIcon(
+                                backgroundColor =
+                                    backgroundColor
+                            ) {
+
                                 Icon(
-                                    if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, 
-                                    contentDescription = "Ses", 
-                                    tint = if (isRecording) Color.Red else LocalContentColor.current
+                                    Icons.Default.Gesture,
+                                    contentDescription =
+                                        "Sketch"
                                 )
                             }
                         }
-                        IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
-                            NeonIcon(backgroundColor = backgroundColor) {
-                                Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
+
+                        /*
+                         * Normal note image.
+                         */
+                        IconButton(
+                            onClick = {
+                                galleryLauncher.launch(
+                                    "image/*"
+                                )
+                            }
+                        ) {
+
+                            NeonIcon(
+                                backgroundColor =
+                                    backgroundColor
+                            ) {
+
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription =
+                                        "Resim"
+                                )
                             }
                         }
+
+                        /*
+                         * Audio.
+                         */
+                        IconButton(
+                            onClick = {
+
+                                if (!isRecording) {
+
+                                    val file =
+                                        File(
+                                            context.cacheDir,
+                                            "audio_${System.currentTimeMillis()}.m4a"
+                                        )
+
+                                    audioPath =
+                                        file.absolutePath
+
+                                    try {
+
+                                        recorder.startRecording(
+                                            file
+                                        )
+
+                                        isRecording =
+                                            true
+
+                                    } catch (_: Exception) {
+
+                                        Toast.makeText(
+                                            context,
+                                            "Ses kaydı hatası",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+
+                                } else {
+
+                                    recorder.stopRecording()
+                                    isRecording = false
+                                }
+                            }
+                        ) {
+
+                            NeonIcon(
+                                backgroundColor =
+                                    backgroundColor
+                            ) {
+
+                                Icon(
+                                    if (isRecording) {
+                                        Icons.Default.StopCircle
+                                    } else {
+                                        Icons.Default.Mic
+                                    },
+                                    contentDescription =
+                                        "Ses",
+                                    tint =
+                                        if (isRecording) {
+                                            Color.Red
+                                        } else {
+                                            LocalContentColor.current
+                                        }
+                                )
+                            }
+                        }
+
+                        /*
+                         * Preview.
+                         */
+                        IconButton(
+                            onClick = {
+                                isPreviewMode =
+                                    !isPreviewMode
+                            }
+                        ) {
+
+                            NeonIcon(
+                                backgroundColor =
+                                    backgroundColor
+                            ) {
+
+                                Icon(
+                                    if (isPreviewMode) {
+                                        Icons.Default.Edit
+                                    } else {
+                                        Icons.Default.Visibility
+                                    },
+                                    contentDescription =
+                                        "Önizle"
+                                )
+                            }
+                        }
+
+                        /*
+                         * Delete existing note.
+                         */
                         if (note != null) {
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                NeonIcon(backgroundColor = backgroundColor) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Sil")
+
+                            IconButton(
+                                onClick = {
+                                    showDeleteDialog = true
+                                }
+                            ) {
+
+                                NeonIcon(
+                                    backgroundColor =
+                                        backgroundColor
+                                ) {
+
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription =
+                                            "Sil"
+                                    )
                                 }
                             }
                         }
+
                     } else {
-                        IconButton(onClick = { isSketchMode = false }) {
-                            NeonIcon(backgroundColor = backgroundColor) {
-                                Icon(Icons.Default.TextFields, contentDescription = "Metin Modu")
+
+                        /*
+                         * Exit Sketch mode.
+                         */
+                        IconButton(
+                            onClick = {
+                                isSketchMode = false
+                            }
+                        ) {
+
+                            NeonIcon(
+                                backgroundColor =
+                                    backgroundColor
+                            ) {
+
+                                Icon(
+                                    Icons.Default.TextFields,
+                                    contentDescription =
+                                        "Metin Modu"
+                                )
                             }
                         }
                     }
-                    IconButton(onClick = onBack) {
-                        NeonIcon(backgroundColor = backgroundColor) {
-                            Icon(Icons.Default.Check, contentDescription = "Bitti")
+
+                    /*
+                     * Finish / save.
+                     */
+                    IconButton(
+                        onClick = onBack
+                    ) {
+
+                        NeonIcon(
+                            backgroundColor =
+                                backgroundColor
+                        ) {
+
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription =
+                                    "Bitti"
+                            )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.9f))
+
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor =
+                            backgroundColor.copy(
+                                alpha = 0.9f
+                            )
+                    )
             )
         }
+
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(backgroundColor.copy(alpha = 0.1f))
-        ) {
-            if (!isPreviewMode) {
-                // Common Top UI
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Box {
-                        AssistChip(
-                            onClick = { showFolderMenu = true },
-                            label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
-                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                        DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                            DropdownMenuItem(text = { Text("Klasör Yok") }, onClick = { folderId = null; showFolderMenu = false })
-                            folders.forEach { folder ->
-                                DropdownMenuItem(text = { Text(folder.name) }, onClick = { folderId = folder.id; showFolderMenu = false })
-                            }
-                        }
-                    }
-                    ColorSelector(selectedColorHex = colorHex, onColorSelected = { colorHex = it })
-                }
-
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                .background(
+                    backgroundColor.copy(
+                        alpha = 0.1f
+                    )
                 )
+        ) {
 
-                if (isSketchMode) {
-                    DrawingCanvas(
-                        modifier = Modifier.weight(1f),
-                        initialData = sketchData,
-                        onDataChanged = { sketchData = it }
-                    )
-                    TextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        placeholder = { Text("Çizim hakkında not...", style = MaterialTheme.typography.bodyMedium) },
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
-                    )
-                } else if (note?.type == NoteType.CHECKLIST || checklistItems.isNotEmpty()) {
-                    ChecklistEditor(items = checklistItems, onItemsChanged = { checklistItems = it })
-                } else {
-                    if (imageUris.isNotEmpty()) {
-                        LazyRow(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(imageUris) { uri ->
-                                Box {
-                                    AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-                                    IconButton(onClick = { imageUris = imageUris - uri }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.5f), CircleShape)) {
-                                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    }
+            if (!isPreviewMode) {
+
+                /*
+                 * ------------------------------------------------
+                 * COMMON NOTE HEADER
+                 * ------------------------------------------------
+                 */
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween,
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Box {
+
+                        AssistChip(
+                            onClick = {
+                                showFolderMenu = true
+                            },
+
+                            label = {
+
+                                Text(
+                                    folders
+                                        .find {
+                                            it.id == folderId
+                                        }
+                                        ?.name
+                                        ?: "Klasör Seç"
+                                )
+                            },
+
+                            leadingIcon = {
+
+                                Icon(
+                                    Icons.Default.Folder,
+                                    contentDescription = null,
+                                    modifier =
+                                        Modifier.size(18.dp)
+                                )
+                            }
+                        )
+
+                        DropdownMenu(
+                            expanded =
+                                showFolderMenu,
+                            onDismissRequest = {
+                                showFolderMenu = false
+                            }
+                        ) {
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text("Klasör Yok")
+                                },
+                                onClick = {
+                                    folderId = null
+                                    showFolderMenu = false
                                 }
-                            }
-                        }
-                    }
-                    TextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        placeholder = { Text("Notunuzu yazın...", style = MaterialTheme.typography.bodyLarge) },
-                        modifier = Modifier.fillMaxSize().weight(1f).padding(16.dp),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                        textStyle = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            } else {
-                // Preview Mode
-                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-                    val displayTitle = if (title.isEmpty() && checklistItems.isNotEmpty()) {
-                        checklistItems.firstOrNull()?.text ?: "Başlıksız Not"
-                    } else if (title.isEmpty()) {
-                        "Başlıksız Not"
-                    } else {
-                        title
-                    }
-                    
-                    Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (checklistItems.isNotEmpty()) {
-                        checklistItems.forEach { item ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
-                                Text(item.text, style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge)
-                            }
-                        }
-                    } else {
-                        Text(content, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    if (sketchData?.isNotEmpty() == true) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text("Çizim İçeriyor (Düzenlemek için Sketch moduna geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    }
-                    imageUris.forEach { uri ->
-                        AsyncImage(model = uri, contentDescription = null, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.FillWidth)
-                    }
-                }
-            }
-        }
-    }
+                            )
 
-    if (showDeleteDialog && note != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Notu Sil") },
-            text = { Text("Bu notu silmek istediğinize emin misiniz?") },
-            confirmButton = {
-                TextButton(onClick = { 
-                    onDelete(note)
-                    showDeleteDialog = false
-                }) { Text("Sil", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Vazgeç") }
-            }
-        )
-    }
-}
+                            folders.forEach { folder ->
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(folder.name)
+                                    },
+                                    onClick = {
+                                        folderId =
+                                            folder.id
+                                        showFolderMenu =
+                                            false
+                                
