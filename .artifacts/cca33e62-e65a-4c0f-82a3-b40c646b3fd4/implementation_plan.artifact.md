@@ -1,55 +1,52 @@
-# TayfNotes: Profesyonel Gelişim, Sketch Devrimi ve Gerçek Bulut Senkronizasyonu Planı
+# TayfNotes: Profesyonel Arayüz, Gerçek Senkronizasyon ve Gelişmiş Sketch Planı (v27)
 
-Bu plan, uygulamayı piyasadaki en üst düzey not ve tasarım araçlarıyla (Microsoft To Do, Procreate vb.) yarışacak seviyeye getirmeyi, tablet deneyimini kusursuzlaştırmayı ve veri güvenliğini parmak izi ile zırhlamayı hedefler.
+Bu plan, TayfNotes'u görsel, fonksiyonel ve teknik olarak piyasadaki en üst düzey (Microsoft To Do, Procreate, Google Keep) standartlara taşımayı hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Gerçek Bulut Senkronizasyonu:** Bu aşamada Google Drive ve Dropbox için gerçek kullanıcı girişi (OAuth2) zorunlu hale getirilecektir.
-> **Sketch ve Canvas:** Çizim alanı artık sadece bir eklenti değil, başına buyruk bir tasarım aracı olacaktır. Şekiller, dolgular ve gölgeler vektörel olarak saklanacaktır.
-> **İnce Ayarlar:** Uygulama açılışındaki biyometrik kilit, sadece ilk girişte çalışacak şekilde optimize edilecektir.
+> **Gerçek Senkronizasyon:** Google Drive ve Dropbox için gerçek OAuth2 akışları ve kullanıcı kimlik yönetimi kurulacaktır.
+> **Master-Detail:** Hem dikey hem yatay modda Master-Detail (Liste-Detay) yapısı aktif edilecektir.
+> **Sürükle-Bırak:** Not ve klasör sıralaması manuel olarak (Reorderable) değiştirilebilecektir.
 
 ## Proposed Changes
 
-### 1. Görsel ve Kontrast Devrimi
-- [MODIFY] `ui/theme/Theme.kt`: İkon ve yazıların dışına zıt renkli "Premium Outline" ekleyen özel modifier'ların tanımlanması.
-- [MODIFY] `ui/components/NoteGridItem.kt`: Kontrol listesi ve sketch önizlemelerinin görsellerdeki gibi profesyonel hale getirilmesi.
+### 1. Görsel Zırh ve Kontrast (Madde 1, 11)
+- [MODIFY] `ui/theme/Theme.kt`: İkon ve yazılara zıt renkli "Outline" ve Neon ışıltı (Glow) efektleri ekleyen bileşenler.
+- [NEW] `ui/ThemeSelectionScreen.kt`: Şık bir önizleme ile sadece tema ve karanlık modun seçildiği ekran.
 
-### 2. Gelişmiş Master-Detail ve Tablet Deneyimi
-- [MODIFY] `MainActivity.kt`:
-    - Tablet yatay modda sol (Liste) ve sağ (Detay) panel ayrımı.
-    - Biyometrik kilidin sadece uygulama ilk açıldığında tetiklenmesi.
-- [MODIFY] `ui/MainScreen.kt`:
-    - Üç ayrı "Ekle" butonu (Not, Liste, Sketch).
-    - Sağ üst hamburger menü ile Sıralama (Zaman, Alfabetik, Renk) seçenekleri.
-    - Sürükle-Bırak (Drag and Drop) ile manuel sıralama desteği.
+### 2. Akıllı Navigasyon ve Tablet Uyumu (Madde 2, 3, 4, 13)
+- [MODIFY] `MainActivity.kt`: Dikey ve yatay modda Master-Detail (Sol Liste, Sağ Detay) yapısının stabilizasyonu.
+- [MODIFY] `ui/MainScreen.kt`: Ana ekranda yatay dizilmiş, eşit büyüklükte 3 ana buton (Not, Liste, Sketch).
 
-### 3. Sketch (Canvas) ve Tasarım Araçları
+### 3. Sıralama ve Manuel Düzenleme (Madde 5, 6, 7, 8)
+- [MODIFY] `ui/MainScreen.kt` & `ui/FoldersScreen.kt`:
+    - Sağ üst hamburger menü ile akıllı sıralama (Tarih, Alfabetik, Renk).
+    - `LazyColumn` üzerinde sürükle-bırak (Drag-and-Drop) ile manuel sıralama desteği.
+
+### 4. Gelişmiş Sketch ve Tasarım (Madde 14, 15, 16, 18)
 - [MODIFY] `ui/components/DrawingCanvas.kt`:
-    - Kalem, Fırça, Marker ve Silgi araçları.
-    - **Akıllı Şekiller:** Kare, Dikdörtgen, Daire, Elips, Yay, Üçgen (Otomatik çizim, taşıma ve boyutlandırma).
-    - **Dolgu ve Gölge:** Şekil içlerini renkle doldurma ve gölgelendirme.
-    - Kalınlık kontrolünün hem artırma hem azaltma (Slider) olarak düzeltilmesi.
-    - Canvas üstüne ve altına metin notu ekleme bölümleri.
+    - Tekil kayıt mantığı: Çizimin her aşaması değil, "Tamamla" denildiğinde tek bir veri olarak saklanması.
+    - Gelişmiş Renk Seçici: Sınır rengi ve dolgu rengi (Fill) ayrımı.
+    - Akıllı Şekiller: Kare, Daire, Elips, Yay, Dikdörtgen (Boyutlandırılabilir ve Taşınabilir).
+    - Fırça ve kalemlerde seçilen rengin anlık uygulanması.
 
-### 4. Gerçek Bulut ve Veri Yönetimi
-- [MODIFY] `shared/src/.../SyncManager.kt`: Drive ve Dropbox için gerçek API entegrasyonu ve çift taraflı senkronizasyon.
-- [MODIFY] `util/BackupImportHelper.kt`: ZIP yedeğini veritabanı ve medyayla birlikte geri yükleme.
-- [NEW] `ui/ArchiveScreen.kt` & `ui/TrashScreen.kt`: Arşivleme ve Geri Dönüşüm Kutusu mantığı.
+### 5. Veri Yönetimi ve Gerçek Bulut (Madde 9, 10, 12)
+- [MODIFY] `ui/viewmodel/NoteViewModel.kt`:
+    - Çöp kutusuna taşıma ve kalıcı silme (onaylı) mantığı.
+    - Gerçek Google/Dropbox hesap bağlama ve benzersiz cihaz kimliği ile çift taraflı eşitleme.
+- [MODIFY] `shared/src/.../SyncManager.kt`: Gerçek ağ çağrıları ve API entegrasyonu.
 
-### 5. Hata Düzeltmeleri (Bug Fixes)
-- [FIX] Ses kaydı esnasındaki çökme sorunu (AudioRecorder/Permission).
-- [FIX] Resimlerin önizleme ve detay panelinde görünmemesi.
-- [FIX] Klasör not sayılarının (Note Count) güncellenmemesi.
+### 6. Multimedya ve Fixler (Madde 17)
+- [FIX] Ses kaydı esnasındaki "Error" veren izin ve kayıt başlatma hatası.
+- [FIX] Resimlerin ve Sketch'lerin önizleme/detay panelinde görünmeme sorunu.
 
 ## Verification Plan
 
 ### Automated Verification
 - `./gradlew :app:assembleDebug` ile build kontrolü.
-- APK `TayfNotes_v01.25.apk` üretilecek.
+- APK `TayfNotes_v01.27.apk` üretilecek.
 
 ### Manual Verification
-- Tablette yan çevirince Master-Detail görünümü ve yazıların belirginliği test edilecek.
-- Dropbox/Drive ile gerçek veri alışverişi denenecek.
-- Sketch ekranında karmaşık şekiller çizilip kaydedilecek.
-- Ses kaydı yapılıp dinlenecek.
+- Maddelerin her biri (Sürükle-bırak, Renk dolgusu, Gerçek senkronizasyon vb.) tek tek test edilecek.
+- Tablette hem dikey hem yatay modda Master-Detail akışı kontrol edilecek.

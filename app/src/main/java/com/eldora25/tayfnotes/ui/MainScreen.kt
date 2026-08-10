@@ -1,19 +1,21 @@
 package com.eldora25.tayfnotes.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eldora25.tayfnotes.BuildConfig
 import com.eldora25.tayfnotes.shared.model.Note
@@ -37,13 +39,7 @@ fun MainScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     
     val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    
-    val columns = when {
-        screenWidth > 900.dp -> StaggeredGridCells.Fixed(4)
-        screenWidth > 600.dp -> StaggeredGridCells.Fixed(3)
-        else -> StaggeredGridCells.Fixed(2)
-    }
+    val isPortrait = configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
 
     val sortedNotes = remember(notes, sortType) {
         when (sortType) {
@@ -86,11 +82,11 @@ fun MainScreen(
                 CenterAlignedTopAppBar(
                     title = { 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("TayfNotes", style = MaterialTheme.typography.headlineMedium)
+                            Text("TayfNotes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                             Text(
                                 "buildv01.${BuildConfig.BUILD_NO} Tayfun YAMAK©", 
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     },
@@ -100,7 +96,7 @@ fun MainScreen(
                         }
                         Box {
                             IconButton(onClick = { showSortMenu = true }) {
-                                Icon(Icons.Default.Sort, contentDescription = "Sırala")
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sırala")
                             }
                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                 DropdownMenuItem(text = { Text("Düzenlenme Zamanı") }, onClick = { sortType = SortType.DATE_MODIFIED; showSortMenu = false })
@@ -112,56 +108,53 @@ fun MainScreen(
                     }
                 )
             }
-        },
-        floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                FloatingActionButton(
-                    onClick = onAddSketch,
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 8.dp).size(48.dp),
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Gesture, contentDescription = "Sketch")
-                }
-                FloatingActionButton(
-                    onClick = onAddChecklist,
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.padding(bottom = 8.dp).size(48.dp),
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Checklist, contentDescription = "Liste")
-                }
-                FloatingActionButton(
-                    onClick = onAddNote,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.Black
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Note")
-                }
-            }
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 8.dp)
         ) {
+            // Madde 13: Three equal horizontal buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AddActionButton(
+                    icon = Icons.Default.Description,
+                    label = "Not",
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAddNote
+                )
+                AddActionButton(
+                    icon = Icons.Default.Checklist,
+                    label = "Liste",
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAddChecklist
+                )
+                AddActionButton(
+                    icon = Icons.Default.Gesture,
+                    label = "Sketch",
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAddSketch
+                )
+            }
+
+            // Madde 2, 3, 4: Single column list
             if (sortedNotes.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (searchQuery.isEmpty()) "Henüz not yok." else "Sonuç bulunamadı.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
-                    )
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(if (searchQuery.isEmpty()) "Henüz not yok." else "Sonuç bulunamadı.", color = Color.Gray)
                 }
             } else {
-                LazyVerticalStaggeredGrid(
-                    columns = columns,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalItemSpacing = 8.dp
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(sortedNotes, key = { it.id }) { note ->
                         NoteGridItem(
@@ -171,6 +164,31 @@ fun MainScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AddActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color, 
+            contentColor = if (color.luminance() > 0.5f) Color.Black else Color.White
+        )
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

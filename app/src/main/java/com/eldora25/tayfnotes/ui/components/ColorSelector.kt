@@ -15,7 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.ui.theme.NeonCapsule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,12 +35,18 @@ fun ColorSelector(
         "#795548", "#9E9E9E", "#607D8B", "#000000"
     )
 
-    IconButton(onClick = { showSheet = true }) {
-        Icon(
-            Icons.Default.Palette, 
-            contentDescription = "Renk Seç",
-            tint = Color(android.graphics.Color.parseColor(selectedColorHex))
-        )
+    val bgColor = try { Color(android.graphics.Color.parseColor(selectedColorHex)) } catch(_: Exception) { Color.White }
+
+    // Madde 1: High Contrast Neon Capsule for Palette Icon
+    Box(modifier = Modifier.clickable { showSheet = true }) {
+        NeonCapsule(backgroundColor = bgColor) {
+            Icon(
+                Icons.Default.Palette, 
+                contentDescription = "Renk Seç",
+                tint = if (bgColor.luminance() > 0.45f) Color.Black else Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 
     if (showSheet) {
@@ -51,7 +59,7 @@ fun ColorSelector(
                 Spacer(modifier = Modifier.height(16.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(48.dp),
-                    modifier = Modifier.fillMaxWidth().height(250.dp),
+                    modifier = Modifier.fillMaxWidth().height(300.dp),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)

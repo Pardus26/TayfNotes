@@ -59,7 +59,7 @@ fun MoreScreen(
                 MenuItem("Tüm notlar", Icons.Default.Description, Screen.Main),
                 MenuItem("Arşiv", Icons.Default.Archive, Screen.Archive),
                 MenuItem("Çöp Kutusu", Icons.Default.Delete, Screen.Trash),
-                MenuItem("Tema", Icons.Default.Palette, Screen.Settings), // Or specialized theme screen
+                MenuItem("Tema", Icons.Default.Palette, Screen.ThemeSelection), // Fixed Madde 11
                 MenuItem("Ayarlar", Icons.Default.Settings, Screen.Settings)
             )
 

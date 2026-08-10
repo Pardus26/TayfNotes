@@ -41,6 +41,7 @@ sealed class Screen {
     object Archive : Screen()
     object Trash : Screen()
     object Settings : Screen()
+    object ThemeSelection : Screen()
     data class EditNote(val note: Note? = null, val initialSketch: Boolean = false) : Screen()
 }
 
@@ -125,8 +126,8 @@ class MainActivity : FragmentActivity() {
         val activeCloudProvider by noteViewModel.activeCloudProvider.collectAsState()
         
         val configuration = LocalConfiguration.current
-        val isTablet = configuration.screenWidthDp >= 600
-        var selectedNoteInTablet by remember { mutableStateOf<Note?>(null) }
+        val isMasterDetail = configuration.screenWidthDp >= 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        var selectedNoteInMasterDetail by remember { mutableStateOf<Note?>(null) }
 
         val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let {
@@ -155,6 +156,15 @@ class MainActivity : FragmentActivity() {
                         currentScreen = Screen.Main
                     }
                 )
+            } else if (currentScreen is Screen.ThemeSelection) {
+                BackHandler { currentScreen = Screen.More }
+                ThemeSelectionScreen(
+                    currentTheme = currentTheme,
+                    isDarkMode = isDarkModePref,
+                    onThemeSelected = { noteViewModel.setTheme(it) },
+                    onDarkModeChanged = { noteViewModel.setDarkMode(it) },
+                    onBack = { currentScreen = Screen.More }
+                )
             } else {
                 Scaffold(
                     bottomBar = {
@@ -166,7 +176,7 @@ class MainActivity : FragmentActivity() {
                     }
                 ) { innerPadding ->
                     Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        Box(modifier = Modifier.weight(if (isTablet && currentScreen is Screen.Main) 0.4f else 1f)) {
+                        Box(modifier = Modifier.weight(if (isMasterDetail && currentScreen is Screen.Main) 0.35f else 1f)) {
                             when (currentScreen) {
                                 is Screen.Main -> MainScreen(
                                     notes = notes,
@@ -176,7 +186,7 @@ class MainActivity : FragmentActivity() {
                                     onAddChecklist = { currentScreen = Screen.EditNote(note = Note(id = System.currentTimeMillis().toString(), title = "", content = "", type = com.eldora25.tayfnotes.shared.model.NoteType.CHECKLIST)) },
                                     onAddSketch = { currentScreen = Screen.EditNote(initialSketch = true) },
                                     onEditNote = { note -> 
-                                        if (isTablet) selectedNoteInTablet = note
+                                        if (isMasterDetail) selectedNoteInMasterDetail = note
                                         else currentScreen = Screen.EditNote(note)
                                     }
                                 )
@@ -210,13 +220,7 @@ class MainActivity : FragmentActivity() {
                                 is Screen.Settings -> SettingsScreen(
                                     onBack = { currentScreen = Screen.More },
                                     isSyncing = isSyncing,
-                                    onSyncClick = { 
-                                        if (activeCloudProvider == null) {
-                                            Toast.makeText(this@MainActivity, "Lütfen önce bir sağlayıcı seçin.", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            noteViewModel.syncData() 
-                                        }
-                                    },
+                                    onSyncClick = { noteViewModel.syncData() },
                                     currentTheme = currentTheme,
                                     onThemeSelected = { noteViewModel.setTheme(it) },
                                     isDarkMode = isDarkModePref,
@@ -236,16 +240,16 @@ class MainActivity : FragmentActivity() {
                             }
                         }
                         
-                        if (isTablet && currentScreen is Screen.Main) {
+                        if (isMasterDetail && currentScreen is Screen.Main) {
                             VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                            Box(modifier = Modifier.weight(0.6f)) {
+                            Box(modifier = Modifier.weight(0.65f)) {
                                 DetailPane(
-                                    note = selectedNoteInTablet,
+                                    note = selectedNoteInMasterDetail,
                                     modifier = Modifier.fillMaxSize()
                                 )
-                                if (selectedNoteInTablet != null) {
+                                if (selectedNoteInMasterDetail != null) {
                                     IconButton(
-                                        onClick = { currentScreen = Screen.EditNote(selectedNoteInTablet) },
+                                        onClick = { currentScreen = Screen.EditNote(selectedNoteInMasterDetail) },
                                         modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(16.dp)
                                     ) {
                                         Icon(Icons.Default.Edit, contentDescription = "Düzenle")

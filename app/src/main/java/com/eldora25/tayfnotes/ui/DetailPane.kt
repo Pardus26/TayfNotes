@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,7 +63,8 @@ fun DetailPane(
         Text(
             text = note.title.ifEmpty { "Başlıksız Not" },
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
         
         Text(
@@ -95,14 +97,15 @@ fun DetailPane(
                     Text(
                         text = item.text,
                         style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge,
-                        color = if (item.isChecked) Color.Gray else Color.Unspecified
+                        color = if (item.isChecked) Color.Gray else MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
         } else {
             Text(
                 text = note.content,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
         
@@ -125,12 +128,12 @@ fun DetailPane(
     }
 }
 
-// Reuse the drawing logic
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPath: DrawPath) {
     val color = if (drawPath.toolType == ToolType.ERASER) Color.White else Color(android.graphics.Color.parseColor(drawPath.colorHex)).run {
         if (drawPath.toolType == ToolType.MARKER) this.copy(alpha = 0.4f) else this
     }
-    
+    val fillColor = if (drawPath.isFilled && drawPath.fillColorHex != null) Color(android.graphics.Color.parseColor(drawPath.fillColorHex)) else Color.Transparent
+
     if (drawPath.toolType == ToolType.SHAPE && drawPath.points.size >= 2) {
         val start = Offset(drawPath.points[0].x, drawPath.points[0].y)
         val end = Offset(drawPath.points[1].x, drawPath.points[1].y)
@@ -141,12 +144,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
 
         when (drawPath.shapeType) {
             ShapeType.RECTANGLE -> {
-                if (drawPath.isFilled) drawRect(color, Offset(left, top), Size(width, height))
+                if (drawPath.isFilled) drawRect(fillColor, Offset(left, top), Size(width, height))
                 drawRect(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.CIRCLE -> {
                 val radius = Math.sqrt((width * width + height * height).toDouble()).toFloat() / 2
-                if (drawPath.isFilled) drawCircle(color, radius, Offset(left + width/2, top + height/2))
+                if (drawPath.isFilled) drawCircle(fillColor, radius, Offset(left + width/2, top + height/2))
                 drawCircle(color, radius, Offset(left + width/2, top + height/2), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.TRIANGLE -> {
@@ -156,11 +159,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
                     lineTo(left + width, top + height)
                     close()
                 }
-                if (drawPath.isFilled) drawPath(path, color)
+                if (drawPath.isFilled) drawPath(path, fillColor)
                 drawPath(path, color, style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.ELLIPSE -> {
-                if (drawPath.isFilled) drawOval(color, Offset(left, top), Size(width, height))
+                if (drawPath.isFilled) drawOval(fillColor, Offset(left, top), Size(width, height))
                 drawOval(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.ARC -> {

@@ -2,6 +2,7 @@ package com.eldora25.tayfnotes.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.provider.Settings
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -48,7 +49,9 @@ class NoteViewModel(
     private val dataStore = application.dataStore
     private val syncManager = SyncManager()
     
-    // Theme Keys
+    // Unique App Instance ID for real sync
+    private val appInstanceId = Settings.Secure.getString(application.contentResolver, Settings.Secure.ANDROID_ID)
+
     private val THEME_KEY = stringPreferencesKey("app_theme")
     private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
     private val BIOMETRIC_KEY = booleanPreferencesKey("biometric_lock")
@@ -91,11 +94,10 @@ class NoteViewModel(
 
     val allFolders: StateFlow<List<Folder>> = combine(folderRepository.allFolders, noteRepository.allNotes) { folders, notes ->
         folders.map { folder ->
-            folder.copy(noteCount = notes.count { it.folderId == folder.id })
+            folder.copy(noteCount = notes.count { it.folderId == folder.id && !trashIds.first().contains(it.id) && !archiveIds.first().contains(it.id) })
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Robust reactive notes flow with Archive/Trash filtering
     val notes: StateFlow<List<Note>> = combine(_selectedFolderId, _searchQuery, archiveIds, trashIds) { folderId, query, archives, trash ->
         NoteFilter(folderId, query, archives, trash)
     }.flatMapLatest { filter ->
@@ -105,15 +107,10 @@ class NoteViewModel(
                 val isTrashed = filter.trash.contains(note.id)
                 val matchesFolder = if (filter.folderId != null) note.folderId == filter.folderId else true
                 val matchesSearch = if (filter.query.isNotEmpty()) note.title.contains(filter.query, ignoreCase = true) || note.content.contains(filter.query, ignoreCase = true) else true
-                
                 !isArchived && !isTrashed && matchesFolder && matchesSearch
             }
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = emptyList()
-    )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val archivedNotes: StateFlow<List<Note>> = combine(noteRepository.allNotes, archiveIds) { all, archives ->
         all.filter { archives.contains(it.id) }
@@ -123,70 +120,60 @@ class NoteViewModel(
         all.filter { trash.contains(it.id) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun onFolderSelected(folderId: String?) {
-        _selectedFolderId.value = folderId
-    }
+    fun onSearchQueryChanged(query: String) { _searchQuery.value = query }
+    fun onFolderSelected(folderId: String?) { _selectedFolderId.value = folderId }
 
     fun setTheme(theme: TayfTheme) {
-        viewModelScope.launch {
-            dataStore.edit { it[THEME_KEY] = theme.name }
-        }
+        viewModelScope.launch { dataStore.edit { it[THEME_KEY] = theme.name } }
     }
 
     fun setDarkMode(enabled: Boolean?) {
-        viewModelScope.launch {
-            dataStore.edit { 
-                if (enabled == null) it.remove(DARK_MODE_KEY) else it[DARK_MODE_KEY] = enabled
-            }
-        }
+        viewModelScope.launch { dataStore.edit { if (enabled == null) it.remove(DARK_MODE_KEY) else it[DARK_MODE_KEY] = enabled } }
     }
 
     fun setBiometricEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStore.edit { it[BIOMETRIC_KEY] = enabled }
-        }
+        viewModelScope.launch { dataStore.edit { it[BIOMETRIC_KEY] = enabled } }
     }
 
     fun setCloudProvider(providerName: String?) {
-        viewModelScope.launch {
-            dataStore.edit { 
-                if (providerName == null) it.remove(CLOUD_PROVIDER_KEY) else it[CLOUD_PROVIDER_KEY] = providerName 
-            }
-        }
+        viewModelScope.launch { dataStore.edit { if (providerName == null) it.remove(CLOUD_PROVIDER_KEY) else it[CLOUD_PROVIDER_KEY] = providerName } }
     }
 
     fun saveNote(note: Note) {
         viewModelScope.launch {
             noteRepository.insert(note.copy(lastModified = System.currentTimeMillis()))
-            if (note.reminderTimestamp != null) {
-                AlarmHelper.scheduleReminder(application, note)
-            } else {
-                AlarmHelper.cancelReminder(application, note.id)
+            if (note.reminderTimestamp != null) AlarmHelper.scheduleReminder(application, note)
+            else AlarmHelper.cancelReminder(application, note.id)
+        }
+    }
+
+    fun deleteNote(note: Note) { viewModelScope.launch { noteRepository.delete(note) } }
+    
+    fun trashNote(noteId: String) {
+        viewModelScope.launch {
+            dataStore.edit { pref ->
+                val current = pref[TRASH_IDS_KEY]?.split(",")?.filter { it.isNotEmpty() }?.toMutableSet() ?: mutableSetOf()
+                current.add(noteId)
+                pref[TRASH_IDS_KEY] = current.joinToString(",")
             }
         }
     }
 
-    fun deleteNote(note: Note) {
+    fun emptyTrash() {
         viewModelScope.launch {
-            noteRepository.delete(note)
+            val currentTrash = trashIds.first()
+            currentTrash.forEach { id ->
+                noteRepository.allNotes.first().find { it.id == id }?.let { noteRepository.delete(it) }
+            }
+            dataStore.edit { it.remove(TRASH_IDS_KEY) }
         }
     }
 
     fun addFolder(name: String, colorHex: String) {
-        viewModelScope.launch {
-            folderRepository.insert(Folder(id = System.currentTimeMillis().toString(), name = name, colorHex = colorHex))
-        }
+        viewModelScope.launch { folderRepository.insert(Folder(id = System.currentTimeMillis().toString(), name = name, colorHex = colorHex)) }
     }
     
-    fun updateFolder(folder: Folder) {
-        viewModelScope.launch {
-            folderRepository.insert(folder)
-        }
-    }
+    fun updateFolder(folder: Folder) { viewModelScope.launch { folderRepository.insert(folder) } }
 
     fun syncData() {
         viewModelScope.launch {
@@ -197,58 +184,17 @@ class NoteViewModel(
                 else -> null
             }
             syncManager.setProvider(provider)
-            val currentNotes = notes.value
-            syncManager.syncNotes(currentNotes)
+            syncManager.syncNotes(notes.value)
             _isSyncing.value = false
         }
     }
 
     fun exportFullBackup(onSuccess: (File) -> Unit) {
-        BackupPackageHelper.createFullBackup(
-            application,
-            onComplete = { onSuccess(it) },
-            onError = { /* Log error */ }
-        )
+        BackupPackageHelper.createFullBackup(application, { onSuccess(it) }, {})
     }
 
-    fun archiveNote(noteId: String) {
-        viewModelScope.launch {
-            dataStore.edit { pref ->
-                val current = pref[ARCHIVE_IDS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
-                current.add(noteId)
-                pref[ARCHIVE_IDS_KEY] = current.joinToString(",")
-            }
-        }
-    }
-
-    fun trashNote(noteId: String) {
-        viewModelScope.launch {
-            dataStore.edit { pref ->
-                val current = pref[TRASH_IDS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
-                current.add(noteId)
-                pref[TRASH_IDS_KEY] = current.joinToString(",")
-            }
-        }
-    }
-    
-    fun emptyTrash() {
-        viewModelScope.launch {
-            dataStore.edit { it.remove(TRASH_IDS_KEY) }
-        }
-    }
-
-    // Helper for Checklist JSON
-    fun checklistToJson(items: List<ChecklistItem>): String {
-        return Json.encodeToString(items)
-    }
-
-    fun jsonToChecklist(json: String): List<ChecklistItem> {
-        return try {
-            Json.decodeFromString(json)
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    fun checklistToJson(items: List<ChecklistItem>): String = Json.encodeToString(items)
+    fun jsonToChecklist(json: String): List<ChecklistItem> = try { Json.decodeFromString(json) } catch (e: Exception) { emptyList() }
 }
 
 class NoteViewModelFactory(

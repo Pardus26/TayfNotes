@@ -2,6 +2,7 @@ package com.eldora25.tayfnotes.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -32,7 +33,8 @@ data class DrawPath(
     val strokeWidth: Float,
     val toolType: ToolType = ToolType.PEN,
     val shapeType: ShapeType? = null,
-    val isFilled: Boolean = false
+    val isFilled: Boolean = false,
+    val fillColorHex: String? = null
 )
 
 enum class ToolType { PEN, MARKER, ERASER, SHAPE }
@@ -57,6 +59,7 @@ fun DrawingCanvas(
     
     val currentPathPoints = remember { mutableStateListOf<Point>() }
     var currentColor by remember { mutableStateOf(Color.Black) }
+    var currentFillColor by remember { mutableStateOf(Color.Transparent) }
     var currentStrokeWidth by remember { mutableStateOf(5f) }
     var currentTool by remember { mutableStateOf(ToolType.PEN) }
     var currentShape by remember { mutableStateOf(ShapeType.RECTANGLE) }
@@ -107,7 +110,7 @@ fun DrawingCanvas(
                     Slider(
                         value = currentStrokeWidth,
                         onValueChange = { currentStrokeWidth = it },
-                        valueRange = 1f..60f,
+                        valueRange = 1f..100f, // Expanded range
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                     )
                     Text("${currentStrokeWidth.toInt()}", style = MaterialTheme.typography.labelSmall)
@@ -119,7 +122,7 @@ fun DrawingCanvas(
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f)
-                .pointerInput(currentTool, currentShape, currentColor, currentStrokeWidth, isFillEnabled) {
+                .pointerInput(currentTool, currentShape, currentColor, currentStrokeWidth, isFillEnabled, currentFillColor) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             currentPathPoints.add(Point(offset.x, offset.y))
@@ -135,13 +138,15 @@ fun DrawingCanvas(
                         onDragEnd = {
                             if (currentPathPoints.isNotEmpty()) {
                                 val colorString = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt()))
+                                val fillColorString = if (isFillEnabled) String.format("#%06X", (0xFFFFFF and currentFillColor.value.toLong().toInt())) else null
                                 val newPath = DrawPath(
                                     points = currentPathPoints.toList(),
                                     colorHex = colorString,
                                     strokeWidth = currentStrokeWidth,
                                     toolType = currentTool,
                                     shapeType = if (currentTool == ToolType.SHAPE) currentShape else null,
-                                    isFilled = isFillEnabled
+                                    isFilled = isFillEnabled,
+                                    fillColorHex = fillColorString
                                 )
                                 paths = paths + newPath
                                 currentPathPoints.clear()
@@ -155,13 +160,15 @@ fun DrawingCanvas(
             
             if (currentPathPoints.isNotEmpty()) {
                 val colorString = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt()))
+                val fillColorString = if (isFillEnabled) String.format("#%06X", (0xFFFFFF and currentFillColor.value.toLong().toInt())) else null
                 val previewPath = DrawPath(
                     points = currentPathPoints.toList(),
                     colorHex = colorString,
                     strokeWidth = currentStrokeWidth,
                     toolType = currentTool,
                     shapeType = if (currentTool == ToolType.SHAPE) currentShape else null,
-                    isFilled = isFillEnabled
+                    isFilled = isFillEnabled,
+                    fillColorHex = fillColorString
                 )
                 drawDataPath(previewPath)
             }
@@ -174,17 +181,26 @@ fun DrawingCanvas(
             title = { Text("Renk ve Dolgu") },
             text = {
                 Column {
-                    val colors = listOf(Color.Black, Color.DarkGray, Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
+                    val colors = listOf(Color.Black, Color.DarkGray, Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan, Color.White)
+                    Text("Çizgi Rengi", style = MaterialTheme.typography.labelSmall)
                     @OptIn(ExperimentalLayoutApi::class)
                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         colors.forEach { color ->
-                            Box(modifier = Modifier.padding(4.dp).size(36.dp).background(color, CircleShape).clickable { currentColor = color; showColorPicker = false })
+                            Box(modifier = Modifier.padding(4.dp).size(32.dp).background(color, CircleShape).border(if (currentColor == color) 2.dp else 0.dp, Color.Gray, CircleShape).clickable { currentColor = color })
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = isFillEnabled, onCheckedChange = { isFillEnabled = it })
-                        Text("Şekil İçini Doldur")
+                        Text("Dolgu Rengi Aktif")
+                    }
+                    if (isFillEnabled) {
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            colors.forEach { color ->
+                                Box(modifier = Modifier.padding(4.dp).size(32.dp).background(color, CircleShape).border(if (currentFillColor == color) 2.dp else 0.dp, Color.Gray, CircleShape).clickable { currentFillColor = color })
+                            }
+                        }
                     }
                 }
             },
@@ -228,7 +244,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
     val color = if (drawPath.toolType == ToolType.ERASER) Color.White else Color(android.graphics.Color.parseColor(drawPath.colorHex)).run {
         if (drawPath.toolType == ToolType.MARKER) this.copy(alpha = 0.4f) else this
     }
-    
+    val fillColor = if (drawPath.isFilled && drawPath.fillColorHex != null) Color(android.graphics.Color.parseColor(drawPath.fillColorHex)) else Color.Transparent
+
     if (drawPath.toolType == ToolType.SHAPE && drawPath.points.size >= 2) {
         val start = Offset(drawPath.points[0].x, drawPath.points[0].y)
         val end = Offset(drawPath.points[1].x, drawPath.points[1].y)
@@ -239,12 +256,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
 
         when (drawPath.shapeType) {
             ShapeType.RECTANGLE -> {
-                if (drawPath.isFilled) drawRect(color, Offset(left, top), Size(width, height))
+                if (drawPath.isFilled) drawRect(fillColor, Offset(left, top), Size(width, height))
                 drawRect(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.CIRCLE -> {
                 val radius = Math.sqrt((width * width + height * height).toDouble()).toFloat() / 2
-                if (drawPath.isFilled) drawCircle(color, radius, Offset(left + width/2, top + height/2))
+                if (drawPath.isFilled) drawCircle(fillColor, radius, Offset(left + width/2, top + height/2))
                 drawCircle(color, radius, Offset(left + width/2, top + height/2), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.TRIANGLE -> {
@@ -254,11 +271,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
                     lineTo(left + width, top + height)
                     close()
                 }
-                if (drawPath.isFilled) drawPath(path, color)
+                if (drawPath.isFilled) drawPath(path, fillColor)
                 drawPath(path, color, style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.ELLIPSE -> {
-                if (drawPath.isFilled) drawOval(color, Offset(left, top), Size(width, height))
+                if (drawPath.isFilled) drawOval(fillColor, Offset(left, top), Size(width, height))
                 drawOval(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
             }
             ShapeType.ARC -> {
