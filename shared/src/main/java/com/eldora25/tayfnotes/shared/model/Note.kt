@@ -1,8 +1,11 @@
 package com.eldora25.tayfnotes.shared.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * TayfNotes Hybrid Note Model
  */
+@Serializable
 data class Note(
     val id: String,
     val title: String,
@@ -11,8 +14,8 @@ data class Note(
     val type: NoteType = NoteType.TEXT,
     val tags: List<String> = emptyList(),
     val folderId: String? = null,
-    val imageUris: List<String> = emptyList(), // New: Support for multiple images
-    val audioPath: String? = null, // New: Support for one voice note per note
+    val imageUris: List<String> = emptyList(),
+    val audioPath: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
     val reminderTimestamp: Long? = null,
@@ -23,9 +26,21 @@ enum class NoteType {
     TEXT, CHECKLIST
 }
 
+@Serializable
 data class Folder(
     val id: String,
     val name: String,
     val colorHex: String = "#757575",
     val noteCount: Int = 0
+)
+
+/**
+ * Representing a single item in a Checklist
+ */
+@Serializable
+data class ChecklistItem(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val text: String,
+    val isChecked: Boolean = false,
+    val subItems: List<ChecklistItem> = emptyList()
 )

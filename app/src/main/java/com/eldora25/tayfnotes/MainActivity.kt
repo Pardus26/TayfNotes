@@ -68,7 +68,7 @@ class MainActivity : FragmentActivity() {
 
             val permissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
-            ) { /* Handle results */ }
+            ) { /* Results */ }
 
             LaunchedEffect(Unit) {
                 permissionLauncher.launch(permissionsToRequest)
@@ -94,7 +94,7 @@ class MainActivity : FragmentActivity() {
                     MainAppContent()
                 } else {
                     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        // Locked State UI
+                        // Locked
                     }
                 }
             }
@@ -152,7 +152,8 @@ class MainActivity : FragmentActivity() {
                     bottomBar = {
                         BottomNavigationBar(
                             currentScreen = currentScreen,
-                            onScreenChange = { currentScreen = it }
+                            onScreenChange = { currentScreen = it },
+                            onNotesClick = { noteViewModel.onFolderSelected(null) }
                         )
                     }
                 ) { innerPadding ->

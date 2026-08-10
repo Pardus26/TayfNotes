@@ -10,7 +10,8 @@ import com.eldora25.tayfnotes.Screen
 @Composable
 fun BottomNavigationBar(
     currentScreen: Screen,
-    onScreenChange: (Screen) -> Unit
+    onScreenChange: (Screen) -> Unit,
+    onNotesClick: () -> Unit
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -20,7 +21,10 @@ fun BottomNavigationBar(
             icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Notlar") },
             label = { Text("Notlar") },
             selected = currentScreen is Screen.Main,
-            onClick = { onScreenChange(Screen.Main) }
+            onClick = { 
+                onNotesClick()
+                onScreenChange(Screen.Main) 
+            }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Folder, contentDescription = "Klasörler") },
@@ -37,11 +41,8 @@ fun BottomNavigationBar(
         NavigationBarItem(
             icon = { Icon(Icons.Default.Search, contentDescription = "Ara") },
             label = { Text("Ara") },
-            selected = false, // Navigation item, click opens search on main
-            onClick = { 
-                onScreenChange(Screen.Main)
-                // TODO: Trigger search focus in MainScreen
-            }
+            selected = false,
+            onClick = { onScreenChange(Screen.Main) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "Diğer") },

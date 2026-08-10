@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.eldora25.tayfnotes.BuildConfig
 import com.eldora25.tayfnotes.shared.model.Note
@@ -27,7 +28,15 @@ fun MainScreen(
     onEditNote: (Note) -> Unit
 ) {
     var isSearchActive by remember { mutableStateOf(false) }
-    val brandingTitle = "TayfNotes buildv01.${BuildConfig.BUILD_NO} Tayfun YAMAK©"
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    
+    // Adaptive columns for Tablet compatibility
+    val columns = when {
+        screenWidth > 900.dp -> StaggeredGridCells.Fixed(4)
+        screenWidth > 600.dp -> StaggeredGridCells.Fixed(3)
+        else -> StaggeredGridCells.Fixed(2)
+    }
 
     Scaffold(
         topBar = {
@@ -110,13 +119,13 @@ fun MainScreen(
                 }
             } else {
                 LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Fixed(2),
+                    columns = columns,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalItemSpacing = 4.dp
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalItemSpacing = 8.dp
                 ) {
-                    items(notes) { note ->
+                    items(notes, key = { it.id }) { note ->
                         NoteGridItem(
                             note = note,
                             onClick = { onEditNote(note) }

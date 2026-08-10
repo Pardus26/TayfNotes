@@ -12,9 +12,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.eldora25.tayfnotes.data.repository.FolderRepository
 import com.eldora25.tayfnotes.data.repository.NoteRepository
+import com.eldora25.tayfnotes.shared.model.ChecklistItem
 import com.eldora25.tayfnotes.shared.model.Folder
 import com.eldora25.tayfnotes.shared.model.Note
-import com.eldora25.tayfnotes.shared.sync.CloudProvider
 import com.eldora25.tayfnotes.shared.sync.DropboxProvider
 import com.eldora25.tayfnotes.shared.sync.GoogleDriveProvider
 import com.eldora25.tayfnotes.shared.sync.SyncManager
@@ -24,6 +24,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
@@ -77,20 +79,18 @@ class NoteViewModel(
         initialValue = emptyList()
     )
 
-    val notes: StateFlow<List<Note>> = combine(_searchQuery, _selectedFolderId) { query, folderId ->
-        Pair(query, folderId)
-    }
-    .debounce(300)
-    .flatMapLatest { (query, folderId) ->
-        when {
-            query.isNotEmpty() -> noteRepository.search(query)
-            folderId != null -> noteRepository.getNotesByFolder(folderId)
-            else -> noteRepository.allNotes
+    // Robust reactive notes flow
+    val notes: StateFlow<List<Note>> = _selectedFolderId.flatMapLatest { folderId ->
+        _searchQuery.debounce(300).flatMapLatest { query ->
+            when {
+                query.isNotEmpty() -> noteRepository.search(query)
+                folderId != null -> noteRepository.getNotesByFolder(folderId)
+                else -> noteRepository.allNotes
+            }
         }
-    }
-    .stateIn(
+    }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Eagerly, // Start immediately to avoid blank screen on tablet
         initialValue = emptyList()
     )
 
@@ -175,6 +175,19 @@ class NoteViewModel(
             onComplete = { onSuccess(it) },
             onError = { /* Log error */ }
         )
+    }
+
+    // Helper for Checklist JSON
+    fun checklistToJson(items: List<ChecklistItem>): String {
+        return Json.encodeToString(items)
+    }
+
+    fun jsonToChecklist(json: String): List<ChecklistItem> {
+        return try {
+            Json.decodeFromString(json)
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 }
 

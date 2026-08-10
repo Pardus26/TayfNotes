@@ -1,40 +1,41 @@
-# TayfNotes: Bulut Senkronizasyon (Drive/Dropbox) ve Toplu Veri Transferi Planı
+# TayfNotes: Tablet Uyumluluğu ve Gelişmiş Kontrol Listesi (Microsoft To Do Stili) Planı
 
-Bu plan, TayfNotes'u cihazlar arası (telefon-tablet) tam uyumlu bir ekosisteme dönüştürmeyi ve veritabanı yedeğini medya dosyalarıyla birlikte tek bir paket olarak taşımayı hedefler.
+Bu plan, Lenovo Idea Tab (TB336FU) ve benzeri yüksek çözünürlüklü tabletlerdeki görsel hataları gidermeyi, veri kaybolma sorunlarını çözmeyi ve Kontrol Listesi özelliğini profesyonel bir seviyeye taşımayı hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Bulut API Anahtarları:** Google Drive ve Dropbox entegrasyonu için uygulama seviyesinde API istemci kimlikleri gereklidir. Bu aşamada teknik altyapı (Ktor tabanlı) ve kullanıcı arayüzü kurulacaktır.
-> **İzolasyon Garantisi:** Proje paket ismi (`com.eldora25.tayfnotes`) ve build sistemi, Windows üzerindeki diğer projelerden tamamen izole kalarak çakışmaları önleyecek şekilde ayarlanmıştır.
+> **Tablet Uyumluluğu:** Ekran yoğunluğu ve yüksek çözünürlük (2.5K) dikkate alınarak tüm UI bileşenleri `Adaptive` (uyarlanabilir) hale getirilecektir.
+> **Kontrol Listesi:** Microsoft To Do benzeri; tamamlananların üzerinin çizilmesi, alta taşınması ve alt görev desteği eklenecektir.
 
 ## Proposed Changes
 
-### 1. Bulut Senkronizasyon Altyapısı (Drive & Dropbox)
-- [NEW] `data/sync/CloudProvider.kt`: Google Drive ve Dropbox için ortak arayüz (Interface).
-- [MODIFY] `shared/src/.../SyncManager.kt`: Seçilen bulut sağlayıcısına göre otomatik veri gönderme ve çekme mantığı.
-- [MODIFY] `ui/viewmodel/NoteViewModel.kt`: Senkronizasyon durumunu ve tercihlerini yöneten yeni state'ler.
+### 1. Tablet ve Yüksek Çözünürlük Düzeltmeleri
+- [MODIFY] `ui/MainScreen.kt`: Izgara (Grid) yapısının tabletlerde 3 veya 4 sütunlu olacak şekilde dinamikleştirilmesi.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Yüksek çözünürlükte görünmeyen renk paleti ve seçim butonlarının görünürlük/padding ayarlarının düzeltilmesi.
+- [MODIFY] `ui/viewmodel/NoteViewModel.kt`:
+    - Klasör filtreleme mantığının düzeltilmesi (Klasör seçili değilse "Tüm Notlar"ın doğru gösterilmesi).
+    - Veritabanı değişimlerinin anlık olarak UI'a yansıması için `StateFlow` akışının optimize edilmesi.
 
-### 2. Toplu Veri Dışa Aktarma ve İçe Aktarma (Migration)
-- [NEW] `util/BackupPackageHelper.kt`: Tüm veritabanını, klasörleri ve resimleri/sesleri tek bir `.tnb` (TayfNotes Backup) veya `.zip` dosyasında toplama mantığı.
-- [MODIFY] `ui/SettingsScreen.kt`: "Tüm Veriyi Yedekle ve Paylaş" butonu ile senkronizasyona gerek kalmadan veri taşıma özelliği.
+### 2. Gelişmiş Kontrol Listesi (Microsoft To Do Esintili)
+- [MODIFY] `shared/src/.../Note.kt`: Not içeriğinin `CHECKLIST` tipinde JSON olarak saklanması (Görev adı, Durum, Alt adımlar).
+- [NEW] `ui/components/ChecklistEditor.kt`: İnteraktif, sürüklenebilir ve tamamlandığında üzeri çizilen liste bileşeni.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Kontrol listesi modunda gelişmiş düzenleyicinin aktif edilmesi.
 
-### 3. UI Geliştirme
-- [MODIFY] `ui/SettingsScreen.kt`:
-    - "Bulut Yedekleme ve Senkronizasyon" kategorisi.
-    - Google Drive ve Dropbox seçim anahtarları.
-    - "Şimdi Senkronize Et" butonu.
+### 3. Veri Kaybolma ve Senkronizasyon Hataları
+- [MODIFY] `data/dao/NoteDao.kt`: Klasör filtresi `null` olduğunda tüm notları getiren `COALESCE` veya opsiyonel sorgu mantığının iyileştirilmesi.
+- [MODIFY] `MainActivity.kt`: Tablet yatay/dikey mod geçişlerinde state kaybının önlenmesi.
 
-### 4. Sistem Güvenliği ve Build
-- [MODIFY] `gradle.properties`: `org.gradle.daemon=false` ve `org.gradle.parallel=false` ayarlarıyla sistem kaynaklarının diğer projelerle çakışmaması sağlanacaktır.
+### 4. Görselleştirme ve Temalar
+- [MODIFY] `ui/theme/Theme.kt`: Tabletlerdeki tema değişim hatalarının (recomposition) giderilmesi.
 
 ## Verification Plan
 
 ### Automated Verification
 - `./gradlew :app:assembleDebug` ile başarılı derleme.
-- APK isminin `TayfNotes_v01.21.apk` olduğu doğrulanacak.
+- APK `TayfNotes_v01.22.apk` üretilecek.
 
 ### Manual Verification
-- Ayarlardan Google Drive seçildiğinde (simüle edilmiş) bağlantı kontrolü.
-- "Tüm Veriyi Dışa Aktar" denildiğinde medya dosyaları dahil bir zip dosyası oluştuğu teyit edilecek.
-- GitHub Actions yedekleme otomasyonu kontrol edilecek.
+- Tablet simülatöründe (veya Lenovo cihazda) notların anlık güncellendiği test edilecek.
+- Klasörler arası geçiş yapıldığında "Klasörsüz" notların kaybolmadığı teyit edilecek.
+- Kontrol listesinde bir eleman işaretlendiğinde animasyonlu şekilde alta geçtiği ve üzerinin çizildiği görülecek.
