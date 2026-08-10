@@ -95,6 +95,7 @@ dependencies {
     // Preferences & Security
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    implementation(libs.coil.compose)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

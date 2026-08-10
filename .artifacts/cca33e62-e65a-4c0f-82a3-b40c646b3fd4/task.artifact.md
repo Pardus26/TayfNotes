@@ -36,14 +36,19 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] `NotificationHelper` ve `ReminderReceiver` kodlanması.
 - [x] `CalendarScreen` aylık listeleme.
 
-## [x] Faz 8: Gelişmiş Özelleştirme ve Akıllı Mantık
+## [x] Faz 8: Gelişmiş Özelleştirme ve Güvenlik
 - [x] Klasör ismi sorma ve düzenleme mantığı.
 - [x] Akıllı başlık üretme (ilk 5 kelime).
 - [x] 20+ Not rengi ve Hamburger menü seçici.
-- [x] 10 Farklı Tema ve Karanlık Mod altyapısı.
+- [x] 10 Premium Tema ve Karanlık Mod desteği.
+- [x] Biyometrik Kilit (Parmak İzi/Yüz Tanıma) entegrasyonu.
 - [x] Notu .txt olarak dışa aktarma (Export).
-- [x] Ana ekran ve Ayarlar başlıklarının (Tayfun YAMAK©) güncellenmesi.
-- [ ] Biyometrik Kilit (Parmak İzi/Yüz Tanıma) entegrasyonu.
 
-## [ ] Faz 9: Çoklu Platform Genişlemesi
+## [x] Faz 9: Multimedya ve Güncelleme Çözümü
+- [x] APK Güncelleme Çözümü (Versioning uyumluluğu).
+- [x] Görsel/Resim ekleme desteği (Galeri entegrasyonu).
+- [x] Sesli Not alma ve dinleme özelliği (Mic/AudioRecorder).
+- [x] Medya izinlerinin (Kamera, Mikrofon) yönetimi.
+
+## [ ] Faz 10: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.

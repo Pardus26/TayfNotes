@@ -1,39 +1,38 @@
-# TayfNotes: Görsel Temalar ve Biyometrik Güvenlik Planı
+# TayfNotes: APK Güncelleme Çözümü, Görsel ve Sesli Not Desteği Planı
 
-Bu plan, uygulamaya 10 farklı renk paleti, karanlık mod desteği ve biyometrik güvenlik (parmak izi/yüz tanıma) özelliklerinin eklenmesini kapsar.
+Bu plan, uygulamanın sürüm güncelleme sorunlarını kökten çözmeyi, notlara resim ve sesli mesaj ekleme özelliklerini entegre etmeyi hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Biyometrik Güvenlik:** Kullanıcının cihazında parmak izi veya yüz tanıma kayıtlı olmalıdır. Uygulama açılışında veya kilitli notlara erişimde bu katman devreye girecektir.
-> **Tema Sistemi:** Seçilen tema tüm uygulamaya (arka planlar, butonlar, vurgular) anında uygulanacaktır.
+> **APK Güncelleme Sorunu:** Sürüm çakışmasını önlemek için sabit bir imzalama anahtarı (keystore) kullanılacak ve `versionCode` her build'de otomatik artırılacaktır. GitHub'dan indirilen her yeni sürüm, eskisini silmeden üzerine yüklenebilecektir.
+> **Medya İzinleri:** Kamera, Galeri ve Mikrofon kullanımı için kullanıcıdan çalışma zamanı (runtime) izinleri istenecektir.
 
 ## Proposed Changes
 
-### 1. Görsel Tema Sistemi (10+ Renk Paleti)
-- [MODIFY] `ui/theme/Color.kt`: 10 farklı tema için (Örn: Ocean, Sunset, Forest, Lavender, Gold, vb.) renk tanımlamaları.
-- [MODIFY] `ui/theme/Theme.kt`: Dinamik tema seçimini destekleyen merkezi tema motoru.
-- [MODIFY] `ui/viewmodel/NoteViewModel.kt`: Seçilen tema ve karanlık mod tercihini saklayan `DataStore` entegrasyonu (başlangıçta ViewModel state).
+### 1. APK Güncelleme ve İmzalama Çözümü
+- [MODIFY] `app/build.gradle.kts`: Sabit bir `signingConfigs` bloğu eklenmesi.
+- [MODIFY] `version.properties`: `versionCode` artırım mantığının GitHub Actions ile tam senkronize edilmesi.
 
-### 2. Biyometrik Kilit Entegrasyonu
-- [MODIFY] `app/build.gradle.kts`: `androidx.biometric:biometric` kütüphanesinin eklenmesi.
-- [NEW] `util/BiometricHelper.kt`: Parmak izi/yüz tanıma doğrulama mantığı.
-- [MODIFY] `MainActivity.kt`: Uygulama açılışında (opsiyonel) veya kilitli notlarda biyometrik kontrol.
+### 2. Görsel/Resim Ekleme Desteği
+- [MODIFY] `shared/src/commonMain/.../Note.kt`: Not modeline `imageUris: List<String>` alanının eklenmesi.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Galeri/Kamera ikonları ve resimlerin not içerisinde listelenmesi.
 
-### 3. UI Entegrasyonu
-- [MODIFY] `ui/SettingsScreen.kt`:
-    - İmaj 10'daki "Tema" butonunun işlevsel hale getirilmesi.
-    - Tema seçim diyaloğu (10 seçenekli görsel liste).
-    - Güvenlik kategorisinde "Biyometrik Kilidi Etkinleştir" seçeneği.
+### 3. Sesli Not Alma (Audio Recording)
+- [NEW] `util/AudioRecorder.kt`: Ses kaydetme ve oynatma yardımcı sınıfı.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Mikrofon ikonu ve kaydedilen seslerin (voice notes) not içerisinde oynatılabilir şekilde sunulması.
+
+### 4. Veri Katmanı
+- [MODIFY] `NoteEntity.kt`: Resim URI'ları ve Ses dosyası yollarını saklayacak yeni sütunların eklenmesi.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile build başarısı.
-- APK isminin `TayfNotes_v01.19.apk` olduğu doğrulanacak.
+- `./gradlew :app:assembleDebug` ile başarılı derleme.
+- APK isminin `TayfNotes_v01.20.apk` olduğu doğrulanacak.
 
 ### Manual Verification
-- Ayarlar -> Tema kısmından farklı renk paletleri seçilecek ve arayüzün değiştiği görülecek.
-- Karanlık mod butonu test edilecek.
-- Biyometrik kilit aktifken notların açılışında doğrulama isteneceği teyit edilecek.
-- GitHub Actions yedekleme zip dosyası kontrol edilecek.
+- Cihaza `v01.19` yüklüyken `v01.20`'nin üzerine sorunsuzca kurulduğu test edilecek.
+- Not içerisine resim ekleme ve resmin görünürlüğü kontrol edilecek.
+- Ses kaydı başlatma, durdurma ve notu açınca tekrar dinleme testi yapılacak.
+- GitHub Actions yedekleme otomasyonu kontrol edilecek.

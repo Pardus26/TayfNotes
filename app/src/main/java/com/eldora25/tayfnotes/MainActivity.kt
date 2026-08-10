@@ -1,7 +1,10 @@
 package com.eldora25.tayfnotes
 
+import android.Manifest
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -56,6 +59,21 @@ class MainActivity : FragmentActivity() {
             val isBiometricEnabled by noteViewModel.isBiometricEnabled.collectAsState()
             
             var isAuthenticated by remember { mutableStateOf(!isBiometricEnabled) }
+
+            val permissionsToRequest = arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO
+            )
+
+            val permissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                // Basic logging
+            }
+
+            LaunchedEffect(Unit) {
+                permissionLauncher.launch(permissionsToRequest)
+            }
 
             LaunchedEffect(isBiometricEnabled) {
                 if (isBiometricEnabled && !isAuthenticated) {

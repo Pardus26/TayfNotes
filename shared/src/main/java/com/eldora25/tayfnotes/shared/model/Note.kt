@@ -11,9 +11,11 @@ data class Note(
     val type: NoteType = NoteType.TEXT,
     val tags: List<String> = emptyList(),
     val folderId: String? = null,
+    val imageUris: List<String> = emptyList(), // New: Support for multiple images
+    val audioPath: String? = null, // New: Support for one voice note per note
     val createdAt: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
-    val reminderTimestamp: Long? = null, // New field for scheduled alerts
+    val reminderTimestamp: Long? = null,
     val isLocked: Boolean = false
 )
 

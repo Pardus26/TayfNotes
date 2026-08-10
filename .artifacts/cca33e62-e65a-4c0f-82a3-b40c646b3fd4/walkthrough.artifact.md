@@ -70,9 +70,16 @@ GitHub Actions workflow dosyası (`android.yml`) şu karmaşık mantığı işle
 - **20+ Renk Seçeneği:** Not editöründe hamburger/palette butonuyla açılan geniş bir renk yelpazesi sunuldu.
 - **Dışa Aktarma:** Seçilen notlar cihaza `.txt` dosyası olarak aktarılabiliyor ve paylaşılabiliyor.
 
+### 13. Premium Temalar ve Biyometrik Güvenlik
+- **10 Renk Paleti:** Ayarlar menüsünden seçilebilen 10 farklı premium tema (Ocean, Forest, Sunset vb.) eklendi.
+- **Karanlık Mod:** Uygulama genelinde tam karanlık mod desteği ve manuel geçiş anahtarı sağlandı.
+- **Biyometrik Kilit:** Parmak izi ve yüz tanıma desteği eklendi. Aktif edildiğinde uygulama açılışında kimlik doğrulaması istenir.
+- **DataStore Entegrasyonu:** Tema ve güvenlik tercihleri `DataStore` ile kalıcı olarak saklanıyor.
+
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.18.apk` üretildi.
-- [x] Klasör yönetimi ve akıllı başlık sistemleri doğrulandı.
-- [x] GitHub Push başarılı: Tüm yeni mantık ve görsel geliştirmeler `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.19.apk` üretildi.
+- [x] Tema değişimi ve karanlık mod geçişleri test edildi.
+- [x] Biyometrik doğrulama akışı (Parmak izi) onaylandı.
+- [x] GitHub Push başarılı: Tüm güvenlik ve görsel kodlar `main` branch'ine gönderildi.
 
 ![GitHub Actions Örneği](https://via.placeholder.com/600x200?text=APK+ve+SourceCode+Backup+Artifacts+Hazir)
