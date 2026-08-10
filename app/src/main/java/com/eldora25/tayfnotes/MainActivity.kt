@@ -29,6 +29,7 @@ import com.eldora25.tayfnotes.ui.components.BottomNavigationBar
 import com.eldora25.tayfnotes.ui.theme.TayfNotesTheme
 import com.eldora25.tayfnotes.ui.viewmodel.NoteViewModel
 import com.eldora25.tayfnotes.ui.viewmodel.NoteViewModelFactory
+import com.eldora25.tayfnotes.util.BackupImportHelper
 import com.eldora25.tayfnotes.util.BackupPackageHelper
 import com.eldora25.tayfnotes.util.BiometricHelper
 
@@ -38,7 +39,7 @@ sealed class Screen {
     object Calendar : Screen()
     object More : Screen()
     object Settings : Screen()
-    data class EditNote(val note: Note? = null) : Screen()
+    data class EditNote(val note: Note? = null, val initialSketch: Boolean = false) : Screen()
 }
 
 class MainActivity : FragmentActivity() {
@@ -112,24 +113,35 @@ class MainActivity : FragmentActivity() {
         val isBiometricEnabled by noteViewModel.isBiometricEnabled.collectAsState()
         val activeCloudProvider by noteViewModel.activeCloudProvider.collectAsState()
         
-        // Tablet State
         val configuration = LocalConfiguration.current
         val isTablet = configuration.screenWidthDp >= 600
         var selectedNoteInTablet by remember { mutableStateOf<Note?>(null) }
 
         var showAddNoteDialog by remember { mutableStateOf(false) }
 
+        val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                BackupImportHelper.importBackup(this, it, 
+                    onComplete = { Toast.makeText(this, "Yedek başarıyla yüklendi. Uygulamayı yeniden başlatın.", Toast.LENGTH_LONG).show() },
+                    onError = { e -> Toast.makeText(this, "Hata: ${e.message}", Toast.LENGTH_SHORT).show() }
+                )
+            }
+        }
+
         if (showAddNoteDialog) {
             AddNoteDialog(
                 onDismiss = { showAddNoteDialog = false },
-                onTypeSelected = { type ->
+                onTypeSelected = { type, isSketch ->
                     showAddNoteDialog = false
-                    currentScreen = Screen.EditNote(Note(
-                        id = System.currentTimeMillis().toString(),
-                        title = "",
-                        content = "",
-                        type = type
-                    ))
+                    currentScreen = Screen.EditNote(
+                        note = Note(
+                            id = System.currentTimeMillis().toString(),
+                            title = "",
+                            content = "",
+                            type = type
+                        ),
+                        initialSketch = isSketch
+                    )
                 }
             )
         }
@@ -144,6 +156,7 @@ class MainActivity : FragmentActivity() {
                 NoteEditorScreen(
                     note = screen.note,
                     folders = folders,
+                    initialSketch = screen.initialSketch,
                     onBack = { currentScreen = Screen.Main },
                     onSave = { noteViewModel.saveNote(it) },
                     onDelete = { 
@@ -191,7 +204,13 @@ class MainActivity : FragmentActivity() {
                                 is Screen.Settings -> SettingsScreen(
                                     onBack = { currentScreen = Screen.More },
                                     isSyncing = isSyncing,
-                                    onSyncClick = { noteViewModel.syncData() },
+                                    onSyncClick = { 
+                                        if (activeCloudProvider == null) {
+                                            Toast.makeText(this@MainActivity, "Lütfen önce bir sağlayıcı seçin.", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            noteViewModel.syncData() 
+                                        }
+                                    },
                                     currentTheme = currentTheme,
                                     onThemeSelected = { noteViewModel.setTheme(it) },
                                     isDarkMode = isDarkModePref,
@@ -204,7 +223,8 @@ class MainActivity : FragmentActivity() {
                                         noteViewModel.exportFullBackup { file ->
                                             BackupPackageHelper.shareBackup(this@MainActivity, file)
                                         }
-                                    }
+                                    },
+                                    onImportBackupClick = { importLauncher.launch("application/zip") }
                                 )
                                 else -> {}
                             }

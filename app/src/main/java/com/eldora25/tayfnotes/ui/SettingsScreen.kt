@@ -1,6 +1,7 @@
 package com.eldora25.tayfnotes.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,8 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +36,8 @@ fun SettingsScreen(
     onBiometricToggle: (Boolean) -> Unit,
     activeCloudProvider: String?,
     onCloudProviderSelected: (String?) -> Unit,
-    onFullBackupClick: () -> Unit
+    onFullBackupClick: () -> Unit,
+    onImportBackupClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -58,22 +60,23 @@ fun SettingsScreen(
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Senkronizasyon Sağlayıcısı", style = MaterialTheme.typography.titleMedium)
+                    Text("Gerçek hesap senkronizasyonu için bir servis seçin.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
+                        CloudChip(
                             selected = activeCloudProvider == null,
                             onClick = { onCloudProviderSelected(null) },
-                            label = { Text("Kapalı") }
+                            label = "Kapalı"
                         )
-                        FilterChip(
+                        CloudChip(
                             selected = activeCloudProvider == "Google Drive",
                             onClick = { onCloudProviderSelected("Google Drive") },
-                            label = { Text("Google Drive") }
+                            label = "Google Drive"
                         )
-                        FilterChip(
+                        CloudChip(
                             selected = activeCloudProvider == "Dropbox",
                             onClick = { onCloudProviderSelected("Dropbox") },
-                            label = { Text("Dropbox") }
+                            label = "Dropbox"
                         )
                     }
                 }
@@ -81,33 +84,41 @@ fun SettingsScreen(
             
             item { 
                 SettingItem(
-                    title = "Şimdi Senkronize Et", 
-                    subtitle = if (isSyncing) "Senkronize ediliyor..." else (activeCloudProvider ?: "Sağlayıcı seçilmedi"),
+                    title = if (activeCloudProvider == null) "Bulut Bağlantısı Kur" else "Şimdi Senkronize Et", 
+                    subtitle = if (isSyncing) "Senkronize ediliyor..." else (activeCloudProvider ?: "Hiçbir bulut hesabı bağlı değil"),
                     onClick = onSyncClick
                 ) 
             }
 
-            item { SettingCategory("Veri Taşıma (Migration)") }
+            item { SettingCategory("Veri Yönetimi (Migration)") }
             item {
                 SettingItem(
                     title = "Tüm Veriyi Yedekle ve Paylaş",
-                    subtitle = "Medya dosyaları ve veritabanını tek paket yap",
+                    subtitle = "Medya dosyaları ve veritabanını tek paket (ZIP) yap",
                     onClick = onFullBackupClick
                 )
             }
+            item {
+                SettingItem(
+                    title = "Yedekten Geri Yükle (İçe Aktar)",
+                    subtitle = "Daha önce alınan .zip yedeğini uygulamaya yükle",
+                    onClick = onImportBackupClick
+                )
+            }
             
-            item { SettingCategory("Görünüm") }
+            item { SettingCategory("Görünüm ve Tema") }
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Renk Paleti", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(TayfTheme.entries) { theme ->
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
-                                    .background(if (theme == currentTheme) MaterialTheme.colorScheme.primary else Color.Gray)
+                                    .background(if (theme == currentTheme) MaterialTheme.colorScheme.primary else Color.Gray.copy(0.3f))
+                                    .border(2.dp, if (theme == currentTheme) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
                                     .clickable { onThemeSelected(theme) }
                             )
                         }
@@ -145,13 +156,27 @@ fun SettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CloudChip(selected: Boolean, onClick: () -> Unit, label: String) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
+}
+
 @Composable
 fun SettingCategory(title: String) {
     Text(
         text = title,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
     )
 }
 
@@ -163,9 +188,9 @@ fun SettingItem(title: String, subtitle: String, onClick: () -> Unit = {}) {
             .clickable { onClick() }
             .padding(16.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
         if (subtitle.isNotEmpty()) {
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

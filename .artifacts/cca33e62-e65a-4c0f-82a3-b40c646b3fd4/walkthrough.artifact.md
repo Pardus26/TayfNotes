@@ -1,12 +1,16 @@
-### 17. Master-Detail Layout ve Profesyonel Çizim (Sketch)
-- **Master-Detail Görünümü:** Tabletlerde (Lenovo Idea Tab, Samsung A73 vb.) ekranı ikiye bölen yapı kuruldu. Sol tarafta not listesi, sağ tarafta seçili notun içeriği anlık olarak görünüyor.
-- **Profesyonel Sketch (Çizim):** Not editörüne tam donanımlı bir çizim alanı (Canvas) eklendi. Kalem desteği, farklı fırça kalınlıkları ve renk seçenekleriyle vektörel çizimler yapılabiliyor.
-- **Anlık Senkronizasyon:** Tablette notlar arası geçişte veri kaybını önleyen ve değişimi anında sağ tarafa yansıtan `StateFlow` optimizasyonu yapıldı.
-- **Zırhlı Kalıcılık:** Tüm ayarlar, temalar ve çizim verileri `Room` ve `DataStore` ile uygulama kapansa dahi milimetrik olarak korunuyor.
-- **APK v01.24:** Build süreci başarıyla tamamlandı ve APK üretildi.
+### 18. Premium Görünüm ve Gelişmiş Canvas (v25)
+- **Görsel Kontrast:** Seçilen her temada (Açık/Koyu/Renkli) yazıların ve butonların net görünmesini sağlayan dinamik kontrast motoru entegre edildi.
+- **Gerçek Bulut Senkronizasyonu:** Dropbox ve Google Drive için sanal olmayan, hesap seçimli ve gerçek yetkilendirme (OAuth2) altyapısı hazırlandı.
+- **İçe Aktar (Restore):** Daha önce dışa aktarılan `.zip` yedeklerini tüm medya ve veritabanıyla birlikte uygulamaya geri yükleme özelliği eklendi.
+- **Üçlü Not Modu:** "Yeni Ekle" menüsü; Metin, Kontrol Listesi ve Sketch olarak 3 ana kategoriye ayrıldı, kullanım kolaylığı sağlandı.
+- **Gelişmiş Çizim (Canvas):**
+    - Kalınlık kontrolü için Slider eklendi (Artırma ve Azaltma).
+    - Otomatik geometrik şekil çizimi (Kare, Daire, Üçgen).
+    - Şekil içini doldurma (Fill) ve silgi araçları eeltlendi.
+    - Seçilen renklerin ve araçların anlık kaydedilmesi sağlandı.
 
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.24.apk` üretildi.
-- [x] Tablette bölünmüş ekran (Master-Detail) testi onaylandı.
-- [x] Çizim araçları ve vektörel kayıt fonksiyonu doğrulandı.
-- [x] GitHub Push başarılı: Tüm yeni kodlar `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.25.apk` üretildi.
+- [x] İçe aktarma (Import) ve Master-Detail kontrastı test edildi.
+- [x] Gelişmiş Sketch araçları (Şekiller ve Slider) doğrulandı.
+- [x] GitHub Push başarılı: Tüm devrimsel kodlar `main` branch'ine gönderildi.

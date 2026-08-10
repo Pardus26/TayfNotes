@@ -1,37 +1,44 @@
-# TayfNotes: Master-Detail Tablet Layout ve Profesyonel Çizim (Sketch) Planı
+# TayfNotes: Premium Görünüm, Gerçek Senkronizasyon ve Gelişmiş Sketch Planı
 
-Bu plan, uygulamayı profesyonel tablet standartlarına (Samsung A73, Lenovo Idea Tab) taşımayı, "Master-Detail" (Yan yana görünüm) yapısını kurmayı ve kalem destekli çizim arayüzünü entegre etmeyi hedefler.
+Bu plan, uygulamayı profesyonel bir tasarım ve dökümantasyon aracına dönüştürmeyi, görsel kontrast sorunlarını gidermeyi ve "sanal" olan özellikleri gerçeğe dönüştürmeyi hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Master-Detail Görünümü:** Geniş ekranlarda (Tablet) sol tarafta not listesi, sağ tarafta not içeriği görünecektir. Telefonlarda ise mevcut navigasyon devam edecektir.
-> **Çizim (Canvas):** Elle çizimler yüksek çözünürlüklü vektör verisi olarak saklanacak, böylece 2.5K ekranlarda bozulma olmayacaktır.
-> **Veritabanı Analizi:** Şu anki Room yapısı optimize edilmiştir. Isar'a geçiş, KMP (iOS/Masaüstü) fazında daha stabil olacaktır; şu anki zırhlı yapıyı bozmamak adına Room ile devam edip "Sketch" desteği eklenecektir.
+> **Gerçek Senkronizasyon:** Google Drive ve Dropbox için OAuth2 akışları entegre edilecektir. Kullanıcıdan hesap seçimi istenecektir.
+> **Sketch Devrimi:** Çizim alanı; otomatik şekil tanıma, dolgu, gölgeleme ve gelişmiş fırça kontrolleriyle donatılacaktır.
+> **Tema Kontrastı:** Tüm metin ve ikon renkleri, seçilen arka plan rengine göre (aydınlık/karanlık) zıt ve belirgin hale getirilecektir.
 
 ## Proposed Changes
 
-### 1. Master-Detail (Adaptive) Arayüzü
-- [MODIFY] `MainActivity.kt`: Ekran genişliğine göre `MasterDetailScaffold` mantığının kurulması.
-- [MODIFY] `ui/MainScreen.kt`: Seçili notun (active note) state yönetimi.
-- [NEW] `ui/DetailPane.kt`: Sağ tarafta görünecek zengin içerik paneli.
+### 1. Görsel İyileştirmeler (Kontrast ve Kontrol)
+- [MODIFY] `ui/theme/Theme.kt`: Arka plan rengine göre metin ve ikon renklerini dinamik hesaplayan mantık (Örn: luminance kontrolü).
+- [MODIFY] `ui/components/ColorSelector.kt`: Tema ile çakışmayan, premium ve belirgin seçim alanı.
 
-### 2. Profesyonel Çizim (Sketch) Arayüzü
-- [NEW] `ui/components/DrawingCanvas.kt`: Kalem, fırça, renk ve silgi desteği sunan çizim alanı.
-- [MODIFY] `shared/src/.../Note.kt`: Not modeline `sketchData` (çizim yolları/koordinatları) alanının eklenmesi.
-- [MODIFY] `ui/NoteEditorScreen.kt`: Çizim moduna geçiş butonu ve canvas entegrasyonu.
+### 2. Veri Yönetimi (İçe Aktar ve Bulut)
+- [NEW] `util/BackupImportHelper.kt`: Dışa aktarılan ZIP yedeklerini uygulamaya geri yükleme (Veritabanı + Medya).
+- [MODIFY] `shared/src/.../SyncManager.kt`: Drive ve Dropbox için gerçek API çağrıları ve hesap yetkilendirme ekranları.
+- [MODIFY] `ui/SettingsScreen.kt`: İçe aktar butonu ve gerçek bulut sağlayıcı yönetimi.
 
-### 3. Veri Güvenliği ve Kalıcılık
-- [MODIFY] `ui/viewmodel/NoteViewModel.kt`: Tüm state'lerin (tema, seçimler, ayarlar) uygulama kapansa dahi korunması için `DataStore` ve `Room` senkronizasyonunun sıkılaştırılması.
-- [MODIFY] `NoteEntity.kt`: Çizim verilerini saklayacak Blob/Text alanının eklenmesi.
+### 3. Not Ekleme ve Sketch Ayrımı
+- [MODIFY] `ui/components/AddNoteDialog.kt`: Metin, Kontrol Listesi ve Sketch olarak 3 ana kategoriye ayrılmış seçim menüsü.
+- [MODIFY] `ui/NoteEditorScreen.kt`: Sketch modunun bağımsız bir "Canvas" editörü olarak yapılandırılması.
+
+### 4. Gelişmiş Sketch (Canvas) Özellikleri
+- [MODIFY] `ui/components/DrawingCanvas.kt`:
+    - **Fırça Kontrolü:** Kalınlık artırma/azaltma (Slider).
+    - **Araçlar:** Kalem, İşaretleyici, Silgi.
+    - **Şekiller:** Kare, Daire, Üçgen (Otomatik çizim ve boyutlandırma).
+    - **Gelişmiş Renk:** Seçilen rengin anında kaydedilmesi ve şekil içi doldurma (Fill) / gölgeleme (Shadow) desteği.
 
 ## Verification Plan
 
 ### Automated Verification
-- `./gradlew :app:assembleDebug` ile derleme kontrolü.
-- APK `TayfNotes_v01.23.apk` üretilecek.
+- `./gradlew :app:assembleDebug` ile build kontrolü.
+- APK `TayfNotes_v01.25.apk` üretilecek.
 
 ### Manual Verification
-- Lenovo Idea Tab (Landscape) modunda sol-sağ bölünmüş ekranın çalıştığı görülecek.
-- Kalem (Stylus) ile çizim yapılıp, nottan çıkıp tekrar girildiğinde çizimin korunduğu test edilecek.
-- Tema değişiminin her iki panelde de anlık yansıdığı teyit edilecek.
+- Koyu temada yazıların beyaz, açık temada siyah olduğu test edilecek.
+- Dropbox/Drive'da "Hesap Seç" ekranının açıldığı doğrulanacak.
+- Sketch ekranında bir kare çizilip içi renkle doldurulacak.
+- Alınan bir yedeğin "İçe Aktar" ile başarılı yüklendiği görülecek.

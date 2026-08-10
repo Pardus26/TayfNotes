@@ -2,62 +2,16 @@
 
 Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çoklu platform desteğine zemin hazırlayarak ilerlemeyi hedefler.
 
-## [x] Faz 2: Veri ve Mimari Temelleri (Gelecek Odaklı)
-- [x] `shared` modülünün (KMP) taslağını oluşturma.
-- [x] GitHub Actions: Kaynak kod yedekleme sisteminin kurulması.
-- [x] Premium İkon Tasarımı ve Uygulanması.
-- [x] Hibrit Not veri modelinin tanımlanması.
-- [x] Yerel veritabanı (Room) kurulumu.
-- [x] Repository katmanının oluşturulması.
+## [x] Faz 2-11: Temel Özellikler ve Tablet Master-Detail
+- [x] Room, KMP Shared, UI, Markdown, Sync, Takvim, Medya, Güvenlik.
+- [x] Master-Detail Tablet Layout ve Sketch (Çizim) temelleri.
 
-## [x] Faz 3: Hibrit Arayüz (Android/Compose)
-- [x] Material 3 ve "Dinamik Renk" teması kurulumu.
-- [x] Ana Ekran: ColorNote stili renkli ızgara (Grid).
-- [x] Not Düzenleyici: Basit metin ve liste geçişi.
+## [x] Faz 12: Premium Görünüm ve Gelişmiş Canvas
+- [x] Dinamik kontrastlı tema motoru (Yazıların kaybolmaması sağlandı).
+- [x] Gerçek Bulut Senkronizasyonu (Drive & Dropbox hesap seçimi ve yetkilendirme altyapısı).
+- [x] Dışa aktarılan yedeği geri yükleme (Import/Restore) özelliği.
+- [x] Üçlü Not Ekleme (Metin, Liste, Sketch ayrı kategoriler yapıldı).
+- [x] Gelişmiş Canvas: Otomatik şekiller (Kare, Daire, Üçgen), dolgu, slider ile kalınlık kontrolü ve silgi.
 
-## [x] Faz 4: Arama ve Silme Özellikleri
-- [x] `NoteDao` ve `NoteRepository` arama fonksiyonları.
-- [x] `NoteViewModel` arama state yönetimi.
-- [x] `MainScreen` arama çubuğu ve `NoteEditorScreen` silme butonu.
-
-## [x] Faz 5: Premium UI ve Hibrit Özellikler (İmajlara Göre)
-- [x] Veri modellerinin klasör ve otomatik kayıt için güncellenmesi.
-- [x] `BottomNavigationBar` ve `AddNoteDialog` bileşenleri.
-- [x] `FoldersScreen`, `CalendarScreen`, `MoreScreen` ve `SettingsScreen` arayüzleri.
-- [x] `NoteEditorScreen` üzerinde "Otomatik Kayıt" mantığı.
-
-## [x] Faz 6: Markdown ve Çevrimiçi Yedekleme
-- [x] Markdown (rendering) ve Bulut Senkronizasyon (Ktor) bağımlılıkları.
-- [x] `NoteEditorScreen` Markdown önizleme.
-- [x] `SyncManager` temel altyapısı.
-
-## [x] Faz 7: Takvim ve Hatırlatıcı Sistemi
-- [x] `reminderTimestamp` alanının entegrasyonu.
-- [x] `NotificationHelper` ve `ReminderReceiver` kodlanması.
-- [x] `CalendarScreen` aylık listeleme.
-
-## [x] Faz 8: Gelişmiş Özelleştirme ve Güvenlik
-- [x] Klasör ismi sorma ve düzenleme mantığı.
-- [x] Akıllı başlık üretme (ilk 5 kelime).
-- [x] 20+ Not rengi ve Hamburger menü seçici.
-- [x] 10 Premium Tema ve Karanlık Mod desteği.
-- [x] Biyometrik Kilit (Parmak İzi/Yüz Tanıma) entegrasyonu.
-- [x] Notu .txt olarak dışa aktarma (Export).
-
-## [x] Faz 9: Multimedya ve Güncelleme Çözümü
-- [x] APK Güncelleme Çözümü (Versioning uyumluluğu).
-- [x] Görsel/Resim ekleme desteği (Galeri entegrasyonu).
-- [x] Sesli Not alma ve dinleme özelliği (Mic/AudioRecorder).
-
-## [x] Faz 10: Tablet Uyumluluğu ve Microsoft To Do Stili Liste
-- [x] Lenovo 2.5K Tablet için Adaptive Grid ve UI düzeltmeleri.
-- [x] Anlık veri güncelleme ve "Klasörsüz Notlar" mantığının iyileştirilmesi.
-- [x] Microsoft To Do stili; üzeri çizilme, alta taşıma ve alt görevler.
-
-## [/] Faz 11: Master-Detail Layout ve Sketch (Çizim)
-- [/] Tabletler için Master-Detail (Yan yana) görünüm.
-- [/] Profesyonel Çizim (Sketch) Canvas ve Araçları.
-- [ ] Veri kalıcılığı ve StateFlow optimizasyonu (Tablet senkronizasyonu).
-
-## [ ] Faz 12: Çoklu Platform Genişlemesi
+## [ ] Faz 13: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.

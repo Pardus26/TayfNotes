@@ -6,10 +6,18 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
 enum class TayfTheme {
     MIDNIGHT, SUNSET, FOREST, OCEAN, LAVENDER, ROSE, SLATE, EMERALD, ROYAL, CRIMSON
+}
+
+/**
+ * Extension to get a high-contrast color (Black or White) based on background luminance
+ */
+fun Color.contentColor(): Color {
+    return if (this.luminance() > 0.5f) Color.Black else Color.White
 }
 
 private fun getDarkColorScheme(theme: TayfTheme) = darkColorScheme(
@@ -30,38 +38,37 @@ private fun getDarkColorScheme(theme: TayfTheme) = darkColorScheme(
     surface = MidnightBlue,
     onPrimary = Color.Black,
     onBackground = Color.White,
-    onSurface = Color.White
+    onSurface = Color.White,
+    onSurfaceVariant = Color.LightGray
 )
 
 private fun getLightColorScheme(theme: TayfTheme) = lightColorScheme(
     primary = when(theme) {
         TayfTheme.MIDNIGHT -> MidnightBlue
-        else -> when(theme) {
-            TayfTheme.SUNSET -> SunsetPrimary
-            TayfTheme.FOREST -> ForestPrimary
-            TayfTheme.OCEAN -> OceanPrimary
-            TayfTheme.LAVENDER -> LavenderPrimary
-            TayfTheme.ROSE -> RosePrimary
-            TayfTheme.SLATE -> SlatePrimary
-            TayfTheme.EMERALD -> EmeraldPrimary
-            TayfTheme.ROYAL -> RoyalPrimary
-            TayfTheme.CRIMSON -> CrimsonPrimary
-            else -> MidnightBlue
-        }
+        TayfTheme.SUNSET -> SunsetPrimary
+        TayfTheme.FOREST -> ForestPrimary
+        TayfTheme.OCEAN -> OceanPrimary
+        TayfTheme.LAVENDER -> LavenderPrimary
+        TayfTheme.ROSE -> RosePrimary
+        TayfTheme.SLATE -> SlatePrimary
+        TayfTheme.EMERALD -> EmeraldPrimary
+        TayfTheme.ROYAL -> RoyalPrimary
+        TayfTheme.CRIMSON -> CrimsonPrimary
     },
     secondary = MidnightLight,
     background = Color.White,
     surface = Color.White,
     onPrimary = Color.White,
     onBackground = MidnightBlue,
-    onSurface = MidnightBlue
+    onSurface = MidnightBlue,
+    onSurfaceVariant = Color.DarkGray
 )
 
 @Composable
 fun TayfNotesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     currentTheme: TayfTheme = TayfTheme.MIDNIGHT,
-    dynamicColor: Boolean = false, // Disable for custom themes
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

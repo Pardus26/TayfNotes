@@ -48,6 +48,7 @@ import java.util.*
 fun NoteEditorScreen(
     note: Note? = null,
     folders: List<Folder> = emptyList(),
+    initialSketch: Boolean = false,
     onBack: () -> Unit,
     onSave: (Note) -> Unit,
     onDelete: (Note) -> Unit
@@ -71,7 +72,7 @@ fun NoteEditorScreen(
     var checklistItems by remember { mutableStateOf(initialItems) }
 
     var isPreviewMode by remember { mutableStateOf(false) }
-    var isSketchMode by remember { mutableStateOf(false) }
+    var isSketchMode by remember { mutableStateOf(initialSketch || (note?.sketchData != null)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     
@@ -165,13 +166,13 @@ fun NoteEditorScreen(
             TopAppBar(
                 title = { Text(if (note == null) "Yeni Not" else "Notu Düzenle") },
                 navigationIcon = {
-                    IconButton(onClick = if (isSketchMode) { { isSketchMode = false } } else onBack) { 
+                    IconButton(onClick = if (isSketchMode && note == null && sketchData == null) { { onBack() } } else onBack) { 
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
                     }
                 },
                 actions = {
                     if (!isSketchMode) {
-                        IconButton(onClick = { isSketchMode = true }) { Icon(Icons.Default.Gesture, contentDescription = "Çizim") }
+                        IconButton(onClick = { isSketchMode = true }) { Icon(Icons.Default.Gesture, contentDescription = "Sketch") }
                         IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
                         IconButton(onClick = {
                             if (!isRecording) {
@@ -192,10 +193,10 @@ fun NoteEditorScreen(
                         if (note != null) {
                             IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
                         }
+                    } else {
+                        IconButton(onClick = { isSketchMode = false }) { Icon(Icons.Default.TextFields, contentDescription = "Metin Modu") }
                     }
-                    IconButton(onClick = if (isSketchMode) { { isSketchMode = false } } else onBack) { 
-                        Icon(Icons.Default.Check, contentDescription = "Tamam") 
-                    }
+                    IconButton(onClick = onBack) { Icon(Icons.Default.Check, contentDescription = "Tamam") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.8f))
             )
@@ -296,6 +297,11 @@ fun NoteEditorScreen(
                             }
                         } else {
                             Text(content, style = MaterialTheme.typography.bodyLarge)
+                        }
+                        
+                        if (sketchData != null && sketchData!!.isNotEmpty()) {
+                             Spacer(modifier = Modifier.height(24.dp))
+                             Text("Sketch Çizimi (Düzenlemek için Sketch Moduna Geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                         }
                     }
                 }
