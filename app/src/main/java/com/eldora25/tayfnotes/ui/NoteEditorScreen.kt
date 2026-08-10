@@ -33,6 +33,7 @@ import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.shared.model.NoteType
 import com.eldora25.tayfnotes.ui.components.ChecklistEditor
 import com.eldora25.tayfnotes.ui.components.ColorSelector
+import com.eldora25.tayfnotes.ui.components.DrawingCanvas
 import com.eldora25.tayfnotes.util.AudioRecorder
 import com.eldora25.tayfnotes.util.FileExportHelper
 import kotlinx.coroutines.delay
@@ -59,6 +60,7 @@ fun NoteEditorScreen(
     var folderId by remember { mutableStateOf(note?.folderId) }
     var imageUris by remember { mutableStateOf(note?.imageUris ?: emptyList()) }
     var audioPath by remember { mutableStateOf(note?.audioPath) }
+    var sketchData by remember { mutableStateOf(note?.sketchData) }
     
     // Checklist state
     val initialItems = remember(note) {
@@ -69,6 +71,7 @@ fun NoteEditorScreen(
     var checklistItems by remember { mutableStateOf(initialItems) }
 
     var isPreviewMode by remember { mutableStateOf(false) }
+    var isSketchMode by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showFolderMenu by remember { mutableStateOf(false) }
     
@@ -86,8 +89,8 @@ fun NoteEditorScreen(
     }
 
     // Auto-save logic
-    LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId, imageUris, audioPath, checklistItems) {
-        if (title.isNotEmpty() || content.isNotEmpty() || imageUris.isNotEmpty() || audioPath != null || checklistItems.isNotEmpty()) {
+    LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId, imageUris, audioPath, checklistItems, sketchData) {
+        if (title.isNotEmpty() || content.isNotEmpty() || imageUris.isNotEmpty() || audioPath != null || checklistItems.isNotEmpty() || sketchData != null) {
             delay(1000)
             
             var finalContent = content
@@ -119,6 +122,7 @@ fun NoteEditorScreen(
                 folderId = folderId,
                 imageUris = imageUris,
                 audioPath = audioPath,
+                sketchData = sketchData,
                 lastModified = System.currentTimeMillis()
             )
             onSave(finalNote)
@@ -161,123 +165,138 @@ fun NoteEditorScreen(
             TopAppBar(
                 title = { Text(if (note == null) "Yeni Not" else "Notu Düzenle") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") }
+                    IconButton(onClick = if (isSketchMode) { { isSketchMode = false } } else onBack) { 
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
+                    }
                 },
                 actions = {
-                    IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
-                    IconButton(onClick = {
-                        if (!isRecording) {
-                            val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
-                            audioPath = file.absolutePath
-                            recorder.startRecording(file)
-                            isRecording = true
-                        } else { recorder.stopRecording(); isRecording = false }
-                    }) {
-                        Icon(if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, contentDescription = "Ses", tint = if (isRecording) Color.Red else LocalContentColor.current)
+                    if (!isSketchMode) {
+                        IconButton(onClick = { isSketchMode = true }) { Icon(Icons.Default.Gesture, contentDescription = "Çizim") }
+                        IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
+                        IconButton(onClick = {
+                            if (!isRecording) {
+                                val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
+                                audioPath = file.absolutePath
+                                recorder.startRecording(file)
+                                isRecording = true
+                            } else { recorder.stopRecording(); isRecording = false }
+                        }) {
+                            Icon(if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, contentDescription = "Ses", tint = if (isRecording) Color.Red else LocalContentColor.current)
+                        }
+                        IconButton(onClick = { showDateTimePicker() }) {
+                            Icon(if (reminderTimestamp == null) Icons.Default.NotificationsNone else Icons.Default.NotificationsActive, contentDescription = "Alarm", tint = if (reminderTimestamp != null) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        }
+                        IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
+                            Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
+                        }
+                        if (note != null) {
+                            IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
+                        }
                     }
-                    IconButton(onClick = { showDateTimePicker() }) {
-                        Icon(if (reminderTimestamp == null) Icons.Default.NotificationsNone else Icons.Default.NotificationsActive, contentDescription = "Alarm", tint = if (reminderTimestamp != null) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                    IconButton(onClick = if (isSketchMode) { { isSketchMode = false } } else onBack) { 
+                        Icon(Icons.Default.Check, contentDescription = "Tamam") 
                     }
-                    IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
-                        Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
-                    }
-                    if (note != null) {
-                        IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
-                    }
-                    IconButton(onClick = onBack) { Icon(Icons.Default.Check, contentDescription = "Tamam") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.8f))
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(backgroundColor.copy(alpha = 0.1f))
-                .padding(16.dp)
-        ) {
-            if (!isPreviewMode) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Box {
-                        AssistChip(
-                            onClick = { showFolderMenu = true },
-                            label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
-                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                        DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                            DropdownMenuItem(text = { Text("Klasör Yok") }, onClick = { folderId = null; showFolderMenu = false })
-                            folders.forEach { folder ->
-                                DropdownMenuItem(text = { Text(folder.name) }, onClick = { folderId = folder.id; showFolderMenu = false })
+        if (isSketchMode) {
+            DrawingCanvas(
+                modifier = Modifier.padding(paddingValues),
+                initialData = sketchData,
+                onDataChanged = { sketchData = it }
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(backgroundColor.copy(alpha = 0.1f))
+                    .padding(16.dp)
+            ) {
+                if (!isPreviewMode) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Box {
+                            AssistChip(
+                                onClick = { showFolderMenu = true },
+                                label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
+                                leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            )
+                            DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
+                                DropdownMenuItem(text = { Text("Klasör Yok") }, onClick = { folderId = null; showFolderMenu = false })
+                                folders.forEach { folder ->
+                                    DropdownMenuItem(text = { Text(folder.name) }, onClick = { folderId = folder.id; showFolderMenu = false })
+                                }
                             }
                         }
+                        ColorSelector(selectedColorHex = colorHex, onColorSelected = { colorHex = it })
                     }
-                    ColorSelector(selectedColorHex = colorHex, onColorSelected = { colorHex = it })
-                }
 
-                if (reminderTimestamp != null) {
-                    AssistChip(
-                        onClick = { reminderTimestamp = null },
-                        label = { Text("Hatırlatıcı: ${SimpleDateFormat("dd MMM, HH:mm", Locale("tr")).format(Date(reminderTimestamp!!))}") },
-                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Kaldır", modifier = Modifier.size(16.dp)) }
+                    if (reminderTimestamp != null) {
+                        AssistChip(
+                            onClick = { reminderTimestamp = null },
+                            label = { Text("Hatırlatıcı: ${SimpleDateFormat("dd MMM, HH:mm", Locale("tr")).format(Date(reminderTimestamp!!))}") },
+                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Kaldır", modifier = Modifier.size(16.dp)) }
+                        )
+                    }
+
+                    TextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                        textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                     )
-                }
 
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                )
-
-                if (imageUris.isNotEmpty()) {
-                    LazyRow(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(imageUris) { uri ->
-                            Box {
-                                AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-                                IconButton(onClick = { imageUris = imageUris - uri }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.5f), CircleShape)) {
-                                    Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    if (imageUris.isNotEmpty()) {
+                        LazyRow(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(imageUris) { uri ->
+                                Box {
+                                    AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                                    IconButton(onClick = { imageUris = imageUris - uri }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.5f), CircleShape)) {
+                                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (note?.type == NoteType.CHECKLIST || checklistItems.isNotEmpty()) {
-                    ChecklistEditor(items = checklistItems, onItemsChanged = { checklistItems = it })
-                } else {
-                    TextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        placeholder = { Text("Notunuzu yazın...", style = MaterialTheme.typography.bodyLarge) },
-                        modifier = Modifier.fillMaxSize().weight(1f),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                        textStyle = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            } else {
-                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    val displayTitle = if (title.isEmpty() && checklistItems.isNotEmpty()) {
-                        checklistItems.firstOrNull()?.text ?: "Başlıksız Not"
-                    } else if (title.isEmpty()) {
-                        "Başlıksız Not"
+                    if (note?.type == NoteType.CHECKLIST || checklistItems.isNotEmpty()) {
+                        ChecklistEditor(items = checklistItems, onItemsChanged = { checklistItems = it })
                     } else {
-                        title
+                        TextField(
+                            value = content,
+                            onValueChange = { content = it },
+                            placeholder = { Text("Notunuzu yazın...", style = MaterialTheme.typography.bodyLarge) },
+                            modifier = Modifier.fillMaxSize().weight(1f),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                            textStyle = MaterialTheme.typography.bodyLarge
+                        )
                     }
-                    
-                    Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    if (checklistItems.isNotEmpty()) {
-                        checklistItems.forEach { item ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
-                                Text(item.text, style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge)
-                            }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        val displayTitle = if (title.isEmpty() && checklistItems.isNotEmpty()) {
+                            checklistItems.firstOrNull()?.text ?: "Başlıksız Not"
+                        } else if (title.isEmpty()) {
+                            "Başlıksız Not"
+                        } else {
+                            title
                         }
-                    } else {
-                        Text(content, style = MaterialTheme.typography.bodyLarge)
+                        
+                        Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (checklistItems.isNotEmpty()) {
+                            checklistItems.forEach { item ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
+                                    Text(item.text, style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                        } else {
+                            Text(content, style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
             }

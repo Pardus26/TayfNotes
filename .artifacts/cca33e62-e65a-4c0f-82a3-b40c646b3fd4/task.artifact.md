@@ -48,13 +48,16 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] APK Güncelleme Çözümü (Versioning uyumluluğu).
 - [x] Görsel/Resim ekleme desteği (Galeri entegrasyonu).
 - [x] Sesli Not alma ve dinleme özelliği (Mic/AudioRecorder).
-- [x] Medya izinlerinin (Kamera, Mikrofon) yönetimi.
 
-## [x] Faz 10: Bulut Senkronizasyon ve Veri Taşıma
-- [x] Build izolasyon ayarları (gradle.properties).
-- [x] Google Drive ve Dropbox entegrasyonu için teknik altyapı.
-- [x] Toplu veri yedeği (ZIP/TNB) oluşturma ve paylaşma.
-- [x] Ayarlar ekranına Bulut ve Taşıma seçeneklerinin eklenmesi.
+## [x] Faz 10: Tablet Uyumluluğu ve Microsoft To Do Stili Liste
+- [x] Lenovo 2.5K Tablet için Adaptive Grid ve UI düzeltmeleri.
+- [x] Anlık veri güncelleme ve "Klasörsüz Notlar" mantığının iyileştirilmesi.
+- [x] Microsoft To Do stili; üzeri çizilme, alta taşıma ve alt görevler.
 
-## [ ] Faz 11: Çoklu Platform Genişlemesi
+## [/] Faz 11: Master-Detail Layout ve Sketch (Çizim)
+- [/] Tabletler için Master-Detail (Yan yana) görünüm.
+- [/] Profesyonel Çizim (Sketch) Canvas ve Araçları.
+- [ ] Veri kalıcılığı ve StateFlow optimizasyonu (Tablet senkronizasyonu).
+
+## [ ] Faz 12: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.

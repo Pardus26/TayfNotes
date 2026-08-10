@@ -16,6 +16,7 @@ data class Note(
     val folderId: String? = null,
     val imageUris: List<String> = emptyList(),
     val audioPath: String? = null,
+    val sketchData: String? = null, // New: Serialized vector drawing data
     val createdAt: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
     val reminderTimestamp: Long? = null,

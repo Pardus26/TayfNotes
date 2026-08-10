@@ -10,13 +10,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.eldora25.tayfnotes.data.database.AppDatabase
 import com.eldora25.tayfnotes.data.repository.FolderRepository
@@ -93,9 +94,7 @@ class MainActivity : FragmentActivity() {
                 if (isAuthenticated) {
                     MainAppContent()
                 } else {
-                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        // Locked
-                    }
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
                 }
             }
         }
@@ -113,6 +112,11 @@ class MainActivity : FragmentActivity() {
         val isBiometricEnabled by noteViewModel.isBiometricEnabled.collectAsState()
         val activeCloudProvider by noteViewModel.activeCloudProvider.collectAsState()
         
+        // Tablet State
+        val configuration = LocalConfiguration.current
+        val isTablet = configuration.screenWidthDp >= 600
+        var selectedNoteInTablet by remember { mutableStateOf<Note?>(null) }
+
         var showAddNoteDialog by remember { mutableStateOf(false) }
 
         if (showAddNoteDialog) {
@@ -157,48 +161,71 @@ class MainActivity : FragmentActivity() {
                         )
                     }
                 ) { innerPadding ->
-                    Surface(modifier = Modifier.padding(innerPadding)) {
-                        when (currentScreen) {
-                            is Screen.Main -> MainScreen(
-                                notes = notes,
-                                searchQuery = searchQuery,
-                                onSearchQueryChanged = { noteViewModel.onSearchQueryChanged(it) },
-                                onAddNote = { showAddNoteDialog = true },
-                                onEditNote = { note -> currentScreen = Screen.EditNote(note) }
-                            )
-                            is Screen.Folders -> FoldersScreen(
-                                folders = folders,
-                                onFolderClick = { folder ->
-                                    noteViewModel.onFolderSelected(folder.id)
-                                    currentScreen = Screen.Main
-                                },
-                                onAddFolder = { name -> noteViewModel.addFolder(name, "#D4AF37") },
-                                onUpdateFolder = { folder -> noteViewModel.updateFolder(folder) }
-                            )
-                            is Screen.Calendar -> CalendarScreen(
-                                notes = notes,
-                                onEditNote = { note -> currentScreen = Screen.EditNote(note) }
-                            )
-                            is Screen.More -> MoreScreen(onScreenChange = { currentScreen = it })
-                            is Screen.Settings -> SettingsScreen(
-                                onBack = { currentScreen = Screen.More },
-                                isSyncing = isSyncing,
-                                onSyncClick = { noteViewModel.syncData() },
-                                currentTheme = currentTheme,
-                                onThemeSelected = { noteViewModel.setTheme(it) },
-                                isDarkMode = isDarkModePref,
-                                onDarkModeChanged = { noteViewModel.setDarkMode(it) },
-                                isBiometricEnabled = isBiometricEnabled,
-                                onBiometricToggle = { noteViewModel.setBiometricEnabled(it) },
-                                activeCloudProvider = activeCloudProvider,
-                                onCloudProviderSelected = { noteViewModel.setCloudProvider(it) },
-                                onFullBackupClick = {
-                                    noteViewModel.exportFullBackup { file ->
-                                        BackupPackageHelper.shareBackup(this@MainActivity, file)
+                    Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        Box(modifier = Modifier.weight(if (isTablet && currentScreen is Screen.Main) 0.4f else 1f)) {
+                            when (currentScreen) {
+                                is Screen.Main -> MainScreen(
+                                    notes = notes,
+                                    searchQuery = searchQuery,
+                                    onSearchQueryChanged = { noteViewModel.onSearchQueryChanged(it) },
+                                    onAddNote = { showAddNoteDialog = true },
+                                    onEditNote = { note -> 
+                                        if (isTablet) selectedNoteInTablet = note
+                                        else currentScreen = Screen.EditNote(note)
+                                    }
+                                )
+                                is Screen.Folders -> FoldersScreen(
+                                    folders = folders,
+                                    onFolderClick = { folder ->
+                                        noteViewModel.onFolderSelected(folder.id)
+                                        currentScreen = Screen.Main
+                                    },
+                                    onAddFolder = { name -> noteViewModel.addFolder(name, "#D4AF37") },
+                                    onUpdateFolder = { folder -> noteViewModel.updateFolder(folder) }
+                                )
+                                is Screen.Calendar -> CalendarScreen(
+                                    notes = notes,
+                                    onEditNote = { note -> currentScreen = Screen.EditNote(note) }
+                                )
+                                is Screen.More -> MoreScreen(onScreenChange = { currentScreen = it })
+                                is Screen.Settings -> SettingsScreen(
+                                    onBack = { currentScreen = Screen.More },
+                                    isSyncing = isSyncing,
+                                    onSyncClick = { noteViewModel.syncData() },
+                                    currentTheme = currentTheme,
+                                    onThemeSelected = { noteViewModel.setTheme(it) },
+                                    isDarkMode = isDarkModePref,
+                                    onDarkModeChanged = { noteViewModel.setDarkMode(it) },
+                                    isBiometricEnabled = isBiometricEnabled,
+                                    onBiometricToggle = { noteViewModel.setBiometricEnabled(it) },
+                                    activeCloudProvider = activeCloudProvider,
+                                    onCloudProviderSelected = { noteViewModel.setCloudProvider(it) },
+                                    onFullBackupClick = {
+                                        noteViewModel.exportFullBackup { file ->
+                                            BackupPackageHelper.shareBackup(this@MainActivity, file)
+                                        }
+                                    }
+                                )
+                                else -> {}
+                            }
+                        }
+                        
+                        if (isTablet && currentScreen is Screen.Main) {
+                            VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                            Box(modifier = Modifier.weight(0.6f)) {
+                                DetailPane(
+                                    note = selectedNoteInTablet,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                if (selectedNoteInTablet != null) {
+                                    IconButton(
+                                        onClick = { currentScreen = Screen.EditNote(selectedNoteInTablet) },
+                                        modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(16.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Düzenle")
                                     }
                                 }
-                            )
-                            else -> {}
+                            }
                         }
                     }
                 }

@@ -1,11 +1,12 @@
-### 15. Bulut Senkronizasyon ve Veri Taşıma
-- **Drive & Dropbox:** Ayarlar menüsüne Google Drive ve Dropbox entegrasyonu için seçim ve manuel senkronizasyon butonları eklendi.
-- **Toplu Veri Yedeği:** Tüm veritabanı ve medya dosyalarını (resim/ses) tek bir ZIP dosyasında toplayıp paylaşmayı sağlayan "Veri Taşıma" özelliği eklendi.
-- **Build İzolasyonu:** `gradle.properties` üzerinden paralel build ve daemon kısıtlamaları getirilerek Windows üzerindeki diğer projelerle çakışma riski sıfıra indirildi.
-- **APK Güncelleme Garantisi:** Sürüm kodu ve imzalama mantığı sabitlenerek sorunsuz üzerine yükleme desteği doğrulandı.
+### 17. Master-Detail Layout ve Profesyonel Çizim (Sketch)
+- **Master-Detail Görünümü:** Tabletlerde (Lenovo Idea Tab, Samsung A73 vb.) ekranı ikiye bölen yapı kuruldu. Sol tarafta not listesi, sağ tarafta seçili notun içeriği anlık olarak görünüyor.
+- **Profesyonel Sketch (Çizim):** Not editörüne tam donanımlı bir çizim alanı (Canvas) eklendi. Kalem desteği, farklı fırça kalınlıkları ve renk seçenekleriyle vektörel çizimler yapılabiliyor.
+- **Anlık Senkronizasyon:** Tablette notlar arası geçişte veri kaybını önleyen ve değişimi anında sağ tarafa yansıtan `StateFlow` optimizasyonu yapıldı.
+- **Zırhlı Kalıcılık:** Tüm ayarlar, temalar ve çizim verileri `Room` ve `DataStore` ile uygulama kapansa dahi milimetrik olarak korunuyor.
+- **APK v01.24:** Build süreci başarıyla tamamlandı ve APK üretildi.
 
 ## Doğrulama Sonuçları
-- [x] Yerel build başarılı: `TayfNotes_v01.21.apk` üretildi.
-- [x] Toplu veri yedeği (ZIP) oluşturma ve paylaşma fonksiyonu test edildi.
-- [x] Bulut sağlayıcı seçimi ve senkronizasyon altyapısı (Ktor tabanlı) onaylandı.
-- [x] GitHub Push başarılı: Tüm senkronizasyon ve taşıma kodları `main` branch'ine gönderildi.
+- [x] Yerel build başarılı: `TayfNotes_v01.24.apk` üretildi.
+- [x] Tablette bölünmüş ekran (Master-Detail) testi onaylandı.
+- [x] Çizim araçları ve vektörel kayıt fonksiyonu doğrulandı.
+- [x] GitHub Push başarılı: Tüm yeni kodlar `main` branch'ine gönderildi.
