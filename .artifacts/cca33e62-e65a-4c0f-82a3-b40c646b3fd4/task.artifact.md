@@ -6,12 +6,21 @@ Bu yol haritası, uygulamanın Android APK üretimini bozmadan, gelecekteki çok
 - [x] Room, KMP Shared, UI, Markdown, Sync, Takvim, Medya, Güvenlik.
 - [x] Master-Detail Tablet Layout ve Sketch (Çizim) temelleri.
 
-## [x] Faz 12: Premium Görünüm ve Gelişmiş Canvas
-- [x] Dinamik kontrastlı tema motoru (Yazıların kaybolmaması sağlandı).
-- [x] Gerçek Bulut Senkronizasyonu (Drive & Dropbox hesap seçimi ve yetkilendirme altyapısı).
-- [x] Dışa aktarılan yedeği geri yükleme (Import/Restore) özelliği.
-- [x] Üçlü Not Ekleme (Metin, Liste, Sketch ayrı kategoriler yapıldı).
-- [x] Gelişmiş Canvas: Otomatik şekiller (Kare, Daire, Üçgen), dolgu, slider ile kalınlık kontrolü ve silgi.
+## [/] Faz 12: Profesyonel Gelişim ve Teknik Devrim (v25)
+- [/] İkon ve metinlere zıt renkli "Outline" ekleyerek kontrastın artırılması.
+- [ ] Master-Detail: Tablet yatay modda sol (Liste) ve sağ (Detay) panel ayrımı.
+- [ ] Biyometrik kilit: Sadece uygulama açılışında çalışacak şekilde düzeltilmesi.
+- [ ] Üçlü Ekle Butonu: Not, Liste ve Sketch için ana ekranda ayrı butonlar.
+- [ ] Gelişmiş Sıralama: Hamburger menü ile Zaman, Alfabetik ve Renk bazlı sıralama.
+- [ ] Sürükle-Bırak: Not ve klasörlerin manuel yer değiştirmesi.
+- [ ] Gerçek Senkronizasyon: Drive ve Dropbox OAuth2 gerçek entegrasyonu.
+- [ ] İleri Seviye Sketch:
+    - [ ] Kalem, fırça, silgi araçları.
+    - [ ] Otomatik şekiller (Kare, Daire, Elips, Üçgen, Yay, Dikdörtgen).
+    - [ ] Şekil içi dolgu ve gölge.
+    - [ ] Canvas üstü/altı metin alanları.
+- [ ] Arşiv ve Çöp Kutusu: Arşivleme ve kalıcı silme fonksiyonları.
+- [ ] Kritik Fixler: Ses kaydı çökmesi, Resim/Sketch önizleme hataları.
 
 ## [ ] Faz 13: Çoklu Platform Genişlemesi
 - [ ] iOS, Masaüstü ve Web hedeflerinin eklenmesi.

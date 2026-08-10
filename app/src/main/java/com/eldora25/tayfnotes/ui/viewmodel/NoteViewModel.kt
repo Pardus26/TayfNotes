@@ -19,6 +19,7 @@ import com.eldora25.tayfnotes.shared.sync.DropboxProvider
 import com.eldora25.tayfnotes.shared.sync.GoogleDriveProvider
 import com.eldora25.tayfnotes.shared.sync.SyncManager
 import com.eldora25.tayfnotes.ui.theme.TayfTheme
+import com.eldora25.tayfnotes.util.AlarmHelper
 import com.eldora25.tayfnotes.util.BackupPackageHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -29,6 +30,13 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
+
+data class NoteFilter(
+    val folderId: String?,
+    val query: String,
+    val archives: Set<String>,
+    val trash: Set<String>
+)
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class NoteViewModel(
@@ -45,6 +53,8 @@ class NoteViewModel(
     private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
     private val BIOMETRIC_KEY = booleanPreferencesKey("biometric_lock")
     private val CLOUD_PROVIDER_KEY = stringPreferencesKey("cloud_provider")
+    private val ARCHIVE_IDS_KEY = stringPreferencesKey("archive_ids")
+    private val TRASH_IDS_KEY = stringPreferencesKey("trash_ids")
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
@@ -73,26 +83,45 @@ class NoteViewModel(
         .map { pref -> pref[CLOUD_PROVIDER_KEY] }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val allFolders: StateFlow<List<Folder>> = folderRepository.allFolders.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    private val archiveIds: Flow<Set<String>> = dataStore.data
+        .map { pref -> pref[ARCHIVE_IDS_KEY]?.split(",")?.filter { it.isNotEmpty() }?.toSet() ?: emptySet() }
+    
+    private val trashIds: Flow<Set<String>> = dataStore.data
+        .map { pref -> pref[TRASH_IDS_KEY]?.split(",")?.filter { it.isNotEmpty() }?.toSet() ?: emptySet() }
 
-    // Robust reactive notes flow
-    val notes: StateFlow<List<Note>> = _selectedFolderId.flatMapLatest { folderId ->
-        _searchQuery.debounce(300).flatMapLatest { query ->
-            when {
-                query.isNotEmpty() -> noteRepository.search(query)
-                folderId != null -> noteRepository.getNotesByFolder(folderId)
-                else -> noteRepository.allNotes
+    val allFolders: StateFlow<List<Folder>> = combine(folderRepository.allFolders, noteRepository.allNotes) { folders, notes ->
+        folders.map { folder ->
+            folder.copy(noteCount = notes.count { it.folderId == folder.id })
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Robust reactive notes flow with Archive/Trash filtering
+    val notes: StateFlow<List<Note>> = combine(_selectedFolderId, _searchQuery, archiveIds, trashIds) { folderId, query, archives, trash ->
+        NoteFilter(folderId, query, archives, trash)
+    }.flatMapLatest { filter ->
+        noteRepository.allNotes.map { all ->
+            all.filter { note ->
+                val isArchived = filter.archives.contains(note.id)
+                val isTrashed = filter.trash.contains(note.id)
+                val matchesFolder = if (filter.folderId != null) note.folderId == filter.folderId else true
+                val matchesSearch = if (filter.query.isNotEmpty()) note.title.contains(filter.query, ignoreCase = true) || note.content.contains(filter.query, ignoreCase = true) else true
+                
+                !isArchived && !isTrashed && matchesFolder && matchesSearch
             }
         }
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly, // Start immediately to avoid blank screen on tablet
+        started = SharingStarted.Eagerly,
         initialValue = emptyList()
     )
+
+    val archivedNotes: StateFlow<List<Note>> = combine(noteRepository.allNotes, archiveIds) { all, archives ->
+        all.filter { archives.contains(it.id) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val trashedNotes: StateFlow<List<Note>> = combine(noteRepository.allNotes, trashIds) { all, trash ->
+        all.filter { trash.contains(it.id) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
@@ -133,6 +162,11 @@ class NoteViewModel(
     fun saveNote(note: Note) {
         viewModelScope.launch {
             noteRepository.insert(note.copy(lastModified = System.currentTimeMillis()))
+            if (note.reminderTimestamp != null) {
+                AlarmHelper.scheduleReminder(application, note)
+            } else {
+                AlarmHelper.cancelReminder(application, note.id)
+            }
         }
     }
 
@@ -175,6 +209,32 @@ class NoteViewModel(
             onComplete = { onSuccess(it) },
             onError = { /* Log error */ }
         )
+    }
+
+    fun archiveNote(noteId: String) {
+        viewModelScope.launch {
+            dataStore.edit { pref ->
+                val current = pref[ARCHIVE_IDS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
+                current.add(noteId)
+                pref[ARCHIVE_IDS_KEY] = current.joinToString(",")
+            }
+        }
+    }
+
+    fun trashNote(noteId: String) {
+        viewModelScope.launch {
+            dataStore.edit { pref ->
+                val current = pref[TRASH_IDS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
+                current.add(noteId)
+                pref[TRASH_IDS_KEY] = current.joinToString(",")
+            }
+        }
+    }
+    
+    fun emptyTrash() {
+        viewModelScope.launch {
+            dataStore.edit { it.remove(TRASH_IDS_KEY) }
+        }
     }
 
     // Helper for Checklist JSON

@@ -1,21 +1,31 @@
 package com.eldora25.tayfnotes.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.eldora25.tayfnotes.shared.model.ChecklistItem
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.shared.model.NoteType
+import kotlinx.serialization.json.Json
 
 @Composable
 fun NoteGridItem(
@@ -28,13 +38,16 @@ fun NoteGridItem(
         MaterialTheme.colorScheme.surfaceVariant
     }
 
+    val contentColor = if (backgroundColor.luminance() > 0.45f) Color.Black else Color.White
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(4.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        border = if (backgroundColor.luminance() > 0.8f) androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray) else null
     ) {
         Column(
             modifier = Modifier
@@ -47,10 +60,9 @@ fun NoteGridItem(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = note.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    text = note.title.ifEmpty { "Başlıksız Not" },
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -59,7 +71,7 @@ fun NoteGridItem(
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = "Locked",
-                        tint = Color.Black.copy(alpha = 0.6f),
+                        tint = contentColor.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -67,33 +79,53 @@ fun NoteGridItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = note.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black.copy(alpha = 0.8f),
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (note.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    note.tags.take(2).forEach { tag ->
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color.Black.copy(alpha = 0.1f)
-                        ) {
+            if (note.type == NoteType.CHECKLIST) {
+                val items = try { Json.decodeFromString<List<ChecklistItem>>(note.content) } catch(e: Exception) { emptyList() }
+                Column {
+                    items.take(3).forEach { item ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = item.isChecked, 
+                                onCheckedChange = null, 
+                                enabled = false,
+                                modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                                colors = CheckboxDefaults.colors(
+                                    uncheckedColor = contentColor.copy(alpha = 0.5f),
+                                    disabledUncheckedColor = contentColor.copy(alpha = 0.5f),
+                                    disabledCheckedColor = contentColor
+                                )
+                            )
                             Text(
-                                text = "#$tag",
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Black
+                                text = item.text,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    textDecoration = if (item.isChecked) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+                                ),
+                                color = if (item.isChecked) contentColor.copy(alpha = 0.5f) else contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
+                    if (items.size > 3) {
+                        Text("...", color = contentColor.copy(alpha = 0.5f))
+                    }
+                }
+            } else {
+                Text(
+                    text = note.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.9f),
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
+            if (note.sketchData?.isNotEmpty() == true) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(contentColor.copy(0.1f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                    Icon(Icons.Default.Gesture, contentDescription = null, tint = contentColor.copy(0.7f), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Sketch", style = MaterialTheme.typography.labelSmall, color = contentColor.copy(0.7f))
                 }
             }
         }

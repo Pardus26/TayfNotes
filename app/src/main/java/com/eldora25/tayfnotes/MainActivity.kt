@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -24,7 +25,6 @@ import com.eldora25.tayfnotes.data.repository.FolderRepository
 import com.eldora25.tayfnotes.data.repository.NoteRepository
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.ui.*
-import com.eldora25.tayfnotes.ui.components.AddNoteDialog
 import com.eldora25.tayfnotes.ui.components.BottomNavigationBar
 import com.eldora25.tayfnotes.ui.theme.TayfNotesTheme
 import com.eldora25.tayfnotes.ui.viewmodel.NoteViewModel
@@ -38,6 +38,8 @@ sealed class Screen {
     object Folders : Screen()
     object Calendar : Screen()
     object More : Screen()
+    object Archive : Screen()
+    object Trash : Screen()
     object Settings : Screen()
     data class EditNote(val note: Note? = null, val initialSketch: Boolean = false) : Screen()
 }
@@ -61,11 +63,14 @@ class MainActivity : FragmentActivity() {
             val isDarkModePref by noteViewModel.isDarkMode.collectAsState()
             val isBiometricEnabled by noteViewModel.isBiometricEnabled.collectAsState()
             
-            var isAuthenticated by remember { mutableStateOf(!isBiometricEnabled) }
+            var isAuthenticated by rememberSaveable(isBiometricEnabled) { 
+                mutableStateOf(!isBiometricEnabled) 
+            }
 
             val permissionsToRequest = arrayOf(
                 Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.POST_NOTIFICATIONS
             )
 
             val permissionLauncher = rememberLauncherForActivityResult(
@@ -95,7 +100,11 @@ class MainActivity : FragmentActivity() {
                 if (isAuthenticated) {
                     MainAppContent()
                 } else {
-                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            Text("TayfNotes Kilitli", style = MaterialTheme.typography.headlineMedium)
+                        }
+                    }
                 }
             }
         }
@@ -105,6 +114,8 @@ class MainActivity : FragmentActivity() {
     fun MainAppContent() {
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
         val notes by noteViewModel.notes.collectAsState()
+        val archivedNotes by noteViewModel.archivedNotes.collectAsState()
+        val trashedNotes by noteViewModel.trashedNotes.collectAsState()
         val searchQuery by noteViewModel.searchQuery.collectAsState()
         val folders by noteViewModel.allFolders.collectAsState()
         val isSyncing by noteViewModel.isSyncing.collectAsState()
@@ -117,8 +128,6 @@ class MainActivity : FragmentActivity() {
         val isTablet = configuration.screenWidthDp >= 600
         var selectedNoteInTablet by remember { mutableStateOf<Note?>(null) }
 
-        var showAddNoteDialog by remember { mutableStateOf(false) }
-
         val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let {
                 BackupImportHelper.importBackup(this, it, 
@@ -126,24 +135,6 @@ class MainActivity : FragmentActivity() {
                     onError = { e -> Toast.makeText(this, "Hata: ${e.message}", Toast.LENGTH_SHORT).show() }
                 )
             }
-        }
-
-        if (showAddNoteDialog) {
-            AddNoteDialog(
-                onDismiss = { showAddNoteDialog = false },
-                onTypeSelected = { type, isSketch ->
-                    showAddNoteDialog = false
-                    currentScreen = Screen.EditNote(
-                        note = Note(
-                            id = System.currentTimeMillis().toString(),
-                            title = "",
-                            content = "",
-                            type = type
-                        ),
-                        initialSketch = isSketch
-                    )
-                }
-            )
         }
 
         Surface(
@@ -160,7 +151,7 @@ class MainActivity : FragmentActivity() {
                     onBack = { currentScreen = Screen.Main },
                     onSave = { noteViewModel.saveNote(it) },
                     onDelete = { 
-                        noteViewModel.deleteNote(it)
+                        noteViewModel.trashNote(it.id)
                         currentScreen = Screen.Main
                     }
                 )
@@ -181,7 +172,9 @@ class MainActivity : FragmentActivity() {
                                     notes = notes,
                                     searchQuery = searchQuery,
                                     onSearchQueryChanged = { noteViewModel.onSearchQueryChanged(it) },
-                                    onAddNote = { showAddNoteDialog = true },
+                                    onAddNote = { currentScreen = Screen.EditNote() },
+                                    onAddChecklist = { currentScreen = Screen.EditNote(note = Note(id = System.currentTimeMillis().toString(), title = "", content = "", type = com.eldora25.tayfnotes.shared.model.NoteType.CHECKLIST)) },
+                                    onAddSketch = { currentScreen = Screen.EditNote(initialSketch = true) },
                                     onEditNote = { note -> 
                                         if (isTablet) selectedNoteInTablet = note
                                         else currentScreen = Screen.EditNote(note)
@@ -201,6 +194,19 @@ class MainActivity : FragmentActivity() {
                                     onEditNote = { note -> currentScreen = Screen.EditNote(note) }
                                 )
                                 is Screen.More -> MoreScreen(onScreenChange = { currentScreen = it })
+                                is Screen.Archive -> NoteListScreen(
+                                    title = "Arşiv",
+                                    notes = archivedNotes,
+                                    onBack = { currentScreen = Screen.More },
+                                    onEditNote = { note -> currentScreen = Screen.EditNote(note) }
+                                )
+                                is Screen.Trash -> NoteListScreen(
+                                    title = "Çöp Kutusu",
+                                    notes = trashedNotes,
+                                    onBack = { currentScreen = Screen.More },
+                                    onEditNote = { note -> currentScreen = Screen.EditNote(note) },
+                                    onEmptyTrash = { noteViewModel.emptyTrash() }
+                                )
                                 is Screen.Settings -> SettingsScreen(
                                     onBack = { currentScreen = Screen.More },
                                     isSyncing = isSyncing,

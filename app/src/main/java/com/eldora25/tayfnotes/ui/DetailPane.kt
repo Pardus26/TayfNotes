@@ -1,18 +1,36 @@
 package com.eldora25.tayfnotes.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.eldora25.tayfnotes.shared.model.ChecklistItem
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.shared.model.NoteType
+import com.eldora25.tayfnotes.ui.components.DrawPath
+import com.eldora25.tayfnotes.ui.components.ShapeType
+import com.eldora25.tayfnotes.ui.components.ToolType
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -56,8 +74,31 @@ fun DetailPane(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
+        if (note.imageUris.isNotEmpty()) {
+            LazyRow(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(note.imageUris) { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = null,
+                        modifier = Modifier.size(300.dp).clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+        }
+
         if (note.type == NoteType.CHECKLIST) {
-            Text("Kontrol Listesi Modu (İçerik Editörde Düzenlenebilir)")
+            val items = try { Json.decodeFromString<List<ChecklistItem>>(note.content) } catch(e: Exception) { emptyList() }
+            items.forEach { item ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                    Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
+                    Text(
+                        text = item.text,
+                        style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge,
+                        color = if (item.isChecked) Color.Gray else Color.Unspecified
+                    )
+                }
+            }
         } else {
             Text(
                 text = note.content,
@@ -66,17 +107,77 @@ fun DetailPane(
         }
         
         if (note.sketchData?.isNotEmpty() == true) {
+            val paths = remember(note.sketchData) {
+                try { Json.decodeFromString<List<DrawPath>>(note.sketchData!!) } catch(e: Exception) { emptyList() }
+            }
             Spacer(modifier = Modifier.height(24.dp))
             Surface(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().height(400.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = Color.White,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("Sketch İçeriyor (Düzenlemek için tıklayın)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    paths.forEach { drawDataPath(it) }
                 }
             }
+        }
+    }
+}
+
+// Reuse the drawing logic
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPath: DrawPath) {
+    val color = if (drawPath.toolType == ToolType.ERASER) Color.White else Color(android.graphics.Color.parseColor(drawPath.colorHex)).run {
+        if (drawPath.toolType == ToolType.MARKER) this.copy(alpha = 0.4f) else this
+    }
+    
+    if (drawPath.toolType == ToolType.SHAPE && drawPath.points.size >= 2) {
+        val start = Offset(drawPath.points[0].x, drawPath.points[0].y)
+        val end = Offset(drawPath.points[1].x, drawPath.points[1].y)
+        val left = minOf(start.x, end.x)
+        val top = minOf(start.y, end.y)
+        val width = Math.abs(start.x - end.x)
+        val height = Math.abs(start.y - end.y)
+
+        when (drawPath.shapeType) {
+            ShapeType.RECTANGLE -> {
+                if (drawPath.isFilled) drawRect(color, Offset(left, top), Size(width, height))
+                drawRect(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.CIRCLE -> {
+                val radius = Math.sqrt((width * width + height * height).toDouble()).toFloat() / 2
+                if (drawPath.isFilled) drawCircle(color, radius, Offset(left + width/2, top + height/2))
+                drawCircle(color, radius, Offset(left + width/2, top + height/2), style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.TRIANGLE -> {
+                val path = Path().apply {
+                    moveTo(left + width/2, top)
+                    lineTo(left, top + height)
+                    lineTo(left + width, top + height)
+                    close()
+                }
+                if (drawPath.isFilled) drawPath(path, color)
+                drawPath(path, color, style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.ELLIPSE -> {
+                if (drawPath.isFilled) drawOval(color, Offset(left, top), Size(width, height))
+                drawOval(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.ARC -> {
+                drawArc(color, 0f, 180f, false, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
+            }
+            else -> {}
+        }
+    } else {
+        val path = Path()
+        if (drawPath.points.isNotEmpty()) {
+            path.moveTo(drawPath.points[0].x, drawPath.points[0].y)
+            drawPath.points.forEach { path.lineTo(it.x, it.y) }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = drawPath.strokeWidth, cap = StrokeCap.Round)
+            )
         }
     }
 }

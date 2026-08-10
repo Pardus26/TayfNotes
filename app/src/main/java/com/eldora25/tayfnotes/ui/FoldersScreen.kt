@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,17 @@ fun FoldersScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var folderToEdit by remember { mutableStateOf<Folder?>(null) }
     var folderNameInput by remember { mutableStateOf("") }
+    
+    var sortType by remember { mutableStateOf(SortType.ALPHABETICAL) }
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    val sortedFolders = remember(folders, sortType) {
+        when (sortType) {
+            SortType.ALPHABETICAL -> folders.sortedBy { it.name.lowercase() }
+            SortType.COLOR -> folders.sortedBy { it.colorHex }
+            else -> folders // Add more as needed
+        }
+    }
 
     if (showAddDialog || folderToEdit != null) {
         AlertDialog(
@@ -77,7 +89,18 @@ fun FoldersScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Klasörler", style = MaterialTheme.typography.headlineMedium) }
+                title = { Text("Klasörler", style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.Default.Sort, contentDescription = "Sırala")
+                        }
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            DropdownMenuItem(text = { Text("Alfabetik") }, onClick = { sortType = SortType.ALPHABETICAL; showSortMenu = false })
+                            DropdownMenuItem(text = { Text("Renge Göre") }, onClick = { sortType = SortType.COLOR; showSortMenu = false })
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -92,7 +115,7 @@ fun FoldersScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            items(folders) { folder ->
+            items(sortedFolders, key = { it.id }) { folder ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -125,8 +148,8 @@ fun FoldersScreen(
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Düzenle", modifier = Modifier.size(20.dp))
                             }
-                            Badge {
-                                Text("${folder.noteCount}")
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                Text("${folder.noteCount}", color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     }

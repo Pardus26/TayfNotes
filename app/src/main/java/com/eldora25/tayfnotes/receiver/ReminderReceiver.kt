@@ -7,10 +7,11 @@ import com.eldora25.tayfnotes.util.NotificationHelper
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        val noteId = intent.getStringExtra("NOTE_ID") ?: return
         val title = intent.getStringExtra("NOTE_TITLE") ?: "TayfNotes"
         val content = intent.getStringExtra("NOTE_CONTENT") ?: "Bir hatırlatıcınız var."
         
         val notificationHelper = NotificationHelper(context)
-        notificationHelper.showReminderNotification(title, content)
+        notificationHelper.showReminderNotification(noteId, title, content)
     }
 }

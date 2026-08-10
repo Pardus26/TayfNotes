@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -35,7 +36,7 @@ data class DrawPath(
 )
 
 enum class ToolType { PEN, MARKER, ERASER, SHAPE }
-enum class ShapeType { RECTANGLE, CIRCLE, TRIANGLE }
+enum class ShapeType { RECTANGLE, CIRCLE, TRIANGLE, ELLIPSE, ARC }
 
 @Serializable
 data class Point(val x: Float, val y: Float)
@@ -65,16 +66,15 @@ fun DrawingCanvas(
     var showShapePicker by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().background(Color.White)) {
-        // Advanced Toolbar
         Surface(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
             tonalElevation = 4.dp
         ) {
             Column {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
@@ -82,7 +82,7 @@ fun DrawingCanvas(
                         Icon(Icons.Default.Create, contentDescription = "Kalem", tint = if (currentTool == ToolType.PEN) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                     IconButton(onClick = { currentTool = ToolType.MARKER }) {
-                        Icon(Icons.Default.Brush, contentDescription = "Marker", tint = if (currentTool == ToolType.MARKER) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                        Icon(Icons.Default.Brush, contentDescription = "Fırça", tint = if (currentTool == ToolType.MARKER) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                     IconButton(onClick = { currentTool = ToolType.ERASER }) {
                         Icon(Icons.Default.AutoFixNormal, contentDescription = "Silgi", tint = if (currentTool == ToolType.ERASER) MaterialTheme.colorScheme.primary else LocalContentColor.current)
@@ -102,13 +102,12 @@ fun DrawingCanvas(
                     }
                 }
                 
-                // Thickness Slider
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LineWeight, contentDescription = null, modifier = Modifier.size(16.dp))
                     Slider(
                         value = currentStrokeWidth,
                         onValueChange = { currentStrokeWidth = it },
-                        valueRange = 1f..50f,
+                        valueRange = 1f..60f,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                     )
                     Text("${currentStrokeWidth.toInt()}", style = MaterialTheme.typography.labelSmall)
@@ -135,9 +134,10 @@ fun DrawingCanvas(
                         },
                         onDragEnd = {
                             if (currentPathPoints.isNotEmpty()) {
+                                val colorString = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt()))
                                 val newPath = DrawPath(
                                     points = currentPathPoints.toList(),
-                                    colorHex = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt())),
+                                    colorHex = colorString,
                                     strokeWidth = currentStrokeWidth,
                                     toolType = currentTool,
                                     shapeType = if (currentTool == ToolType.SHAPE) currentShape else null,
@@ -154,9 +154,10 @@ fun DrawingCanvas(
             paths.forEach { drawDataPath(it) }
             
             if (currentPathPoints.isNotEmpty()) {
+                val colorString = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt()))
                 val previewPath = DrawPath(
                     points = currentPathPoints.toList(),
-                    colorHex = String.format("#%06X", (0xFFFFFF and currentColor.value.toLong().toInt())),
+                    colorHex = colorString,
                     strokeWidth = currentStrokeWidth,
                     toolType = currentTool,
                     shapeType = if (currentTool == ToolType.SHAPE) currentShape else null,
@@ -173,10 +174,11 @@ fun DrawingCanvas(
             title = { Text("Renk ve Dolgu") },
             text = {
                 Column {
-                    val colors = listOf(Color.Black, Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    val colors = listOf(Color.Black, Color.DarkGray, Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         colors.forEach { color ->
-                            Box(modifier = Modifier.size(36.dp).background(color, RoundedCornerShape(18.dp)).clickable { currentColor = color; showColorPicker = false })
+                            Box(modifier = Modifier.padding(4.dp).size(36.dp).background(color, CircleShape).clickable { currentColor = color; showColorPicker = false })
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -195,15 +197,25 @@ fun DrawingCanvas(
             onDismissRequest = { showShapePicker = false },
             title = { Text("Şekil Seç") },
             text = {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.RECTANGLE; showShapePicker = false }) {
-                        Icon(Icons.Default.Rectangle, contentDescription = "Kare")
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.RECTANGLE; showShapePicker = false }) {
+                            Icon(Icons.Default.Rectangle, contentDescription = "Kare")
+                        }
+                        IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.CIRCLE; showShapePicker = false }) {
+                            Icon(Icons.Default.Circle, contentDescription = "Daire")
+                        }
+                        IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.TRIANGLE; showShapePicker = false }) {
+                            Icon(Icons.Default.ChangeHistory, contentDescription = "Üçgen")
+                        }
                     }
-                    IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.CIRCLE; showShapePicker = false }) {
-                        Icon(Icons.Default.Circle, contentDescription = "Daire")
-                    }
-                    IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.TRIANGLE; showShapePicker = false }) {
-                        Icon(Icons.Default.ChangeHistory, contentDescription = "Üçgen")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.ELLIPSE; showShapePicker = false }) {
+                            Icon(Icons.Default.FilterTiltShift, contentDescription = "Elips")
+                        }
+                        IconButton(onClick = { currentTool = ToolType.SHAPE; currentShape = ShapeType.ARC; showShapePicker = false }) {
+                            Icon(Icons.Default.Architecture, contentDescription = "Yay")
+                        }
                     }
                 }
             },
@@ -244,6 +256,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(drawPa
                 }
                 if (drawPath.isFilled) drawPath(path, color)
                 drawPath(path, color, style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.ELLIPSE -> {
+                if (drawPath.isFilled) drawOval(color, Offset(left, top), Size(width, height))
+                drawOval(color, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
+            }
+            ShapeType.ARC -> {
+                drawArc(color, 0f, 180f, false, Offset(left, top), Size(width, height), style = Stroke(width = drawPath.strokeWidth))
             }
             else -> {}
         }

@@ -11,36 +11,54 @@ class AudioRecorder(private val context: Context) {
     private var player: MediaPlayer? = null
 
     fun startRecording(outputFile: File) {
-        recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setOutputFile(outputFile.absolutePath)
-            prepare()
-            start()
+        try {
+            recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(outputFile.absolutePath)
+                prepare()
+                start()
+            }
+        } catch (e: Exception) {
+            recorder?.release()
+            recorder = null
+            throw e
         }
     }
 
     fun stopRecording() {
-        recorder?.stop()
-        recorder?.release()
-        recorder = null
+        try {
+            recorder?.stop()
+        } catch (e: Exception) {
+            // Log error
+        } finally {
+            recorder?.release()
+            recorder = null
+        }
     }
 
     fun startPlaying(file: File, onFinished: () -> Unit) {
-        player = MediaPlayer().apply {
-            setDataSource(file.absolutePath)
-            prepare()
-            start()
-            setOnCompletionListener {
-                onFinished()
-                stopPlaying()
+        try {
+            player?.release()
+            player = MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                prepare()
+                start()
+                setOnCompletionListener {
+                    onFinished()
+                    stopPlaying()
+                }
             }
+        } catch (e: Exception) {
+            player?.release()
+            player = null
+            onFinished()
         }
     }
 

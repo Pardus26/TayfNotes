@@ -1,35 +1,46 @@
-# TayfNotes: Premium Görünüm, Gerçek Senkronizasyon ve Gelişmiş Sketch Planı
+# TayfNotes: Profesyonel Gelişim, Sketch Devrimi ve Gerçek Bulut Senkronizasyonu Planı
 
-Bu plan, uygulamayı profesyonel bir tasarım ve dökümantasyon aracına dönüştürmeyi, görsel kontrast sorunlarını gidermeyi ve "sanal" olan özellikleri gerçeğe dönüştürmeyi hedefler.
+Bu plan, uygulamayı piyasadaki en üst düzey not ve tasarım araçlarıyla (Microsoft To Do, Procreate vb.) yarışacak seviyeye getirmeyi, tablet deneyimini kusursuzlaştırmayı ve veri güvenliğini parmak izi ile zırhlamayı hedefler.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Gerçek Senkronizasyon:** Google Drive ve Dropbox için OAuth2 akışları entegre edilecektir. Kullanıcıdan hesap seçimi istenecektir.
-> **Sketch Devrimi:** Çizim alanı; otomatik şekil tanıma, dolgu, gölgeleme ve gelişmiş fırça kontrolleriyle donatılacaktır.
-> **Tema Kontrastı:** Tüm metin ve ikon renkleri, seçilen arka plan rengine göre (aydınlık/karanlık) zıt ve belirgin hale getirilecektir.
+> **Gerçek Bulut Senkronizasyonu:** Bu aşamada Google Drive ve Dropbox için gerçek kullanıcı girişi (OAuth2) zorunlu hale getirilecektir.
+> **Sketch ve Canvas:** Çizim alanı artık sadece bir eklenti değil, başına buyruk bir tasarım aracı olacaktır. Şekiller, dolgular ve gölgeler vektörel olarak saklanacaktır.
+> **İnce Ayarlar:** Uygulama açılışındaki biyometrik kilit, sadece ilk girişte çalışacak şekilde optimize edilecektir.
 
 ## Proposed Changes
 
-### 1. Görsel İyileştirmeler (Kontrast ve Kontrol)
-- [MODIFY] `ui/theme/Theme.kt`: Arka plan rengine göre metin ve ikon renklerini dinamik hesaplayan mantık (Örn: luminance kontrolü).
-- [MODIFY] `ui/components/ColorSelector.kt`: Tema ile çakışmayan, premium ve belirgin seçim alanı.
+### 1. Görsel ve Kontrast Devrimi
+- [MODIFY] `ui/theme/Theme.kt`: İkon ve yazıların dışına zıt renkli "Premium Outline" ekleyen özel modifier'ların tanımlanması.
+- [MODIFY] `ui/components/NoteGridItem.kt`: Kontrol listesi ve sketch önizlemelerinin görsellerdeki gibi profesyonel hale getirilmesi.
 
-### 2. Veri Yönetimi (İçe Aktar ve Bulut)
-- [NEW] `util/BackupImportHelper.kt`: Dışa aktarılan ZIP yedeklerini uygulamaya geri yükleme (Veritabanı + Medya).
-- [MODIFY] `shared/src/.../SyncManager.kt`: Drive ve Dropbox için gerçek API çağrıları ve hesap yetkilendirme ekranları.
-- [MODIFY] `ui/SettingsScreen.kt`: İçe aktar butonu ve gerçek bulut sağlayıcı yönetimi.
+### 2. Gelişmiş Master-Detail ve Tablet Deneyimi
+- [MODIFY] `MainActivity.kt`:
+    - Tablet yatay modda sol (Liste) ve sağ (Detay) panel ayrımı.
+    - Biyometrik kilidin sadece uygulama ilk açıldığında tetiklenmesi.
+- [MODIFY] `ui/MainScreen.kt`:
+    - Üç ayrı "Ekle" butonu (Not, Liste, Sketch).
+    - Sağ üst hamburger menü ile Sıralama (Zaman, Alfabetik, Renk) seçenekleri.
+    - Sürükle-Bırak (Drag and Drop) ile manuel sıralama desteği.
 
-### 3. Not Ekleme ve Sketch Ayrımı
-- [MODIFY] `ui/components/AddNoteDialog.kt`: Metin, Kontrol Listesi ve Sketch olarak 3 ana kategoriye ayrılmış seçim menüsü.
-- [MODIFY] `ui/NoteEditorScreen.kt`: Sketch modunun bağımsız bir "Canvas" editörü olarak yapılandırılması.
-
-### 4. Gelişmiş Sketch (Canvas) Özellikleri
+### 3. Sketch (Canvas) ve Tasarım Araçları
 - [MODIFY] `ui/components/DrawingCanvas.kt`:
-    - **Fırça Kontrolü:** Kalınlık artırma/azaltma (Slider).
-    - **Araçlar:** Kalem, İşaretleyici, Silgi.
-    - **Şekiller:** Kare, Daire, Üçgen (Otomatik çizim ve boyutlandırma).
-    - **Gelişmiş Renk:** Seçilen rengin anında kaydedilmesi ve şekil içi doldurma (Fill) / gölgeleme (Shadow) desteği.
+    - Kalem, Fırça, Marker ve Silgi araçları.
+    - **Akıllı Şekiller:** Kare, Dikdörtgen, Daire, Elips, Yay, Üçgen (Otomatik çizim, taşıma ve boyutlandırma).
+    - **Dolgu ve Gölge:** Şekil içlerini renkle doldurma ve gölgelendirme.
+    - Kalınlık kontrolünün hem artırma hem azaltma (Slider) olarak düzeltilmesi.
+    - Canvas üstüne ve altına metin notu ekleme bölümleri.
+
+### 4. Gerçek Bulut ve Veri Yönetimi
+- [MODIFY] `shared/src/.../SyncManager.kt`: Drive ve Dropbox için gerçek API entegrasyonu ve çift taraflı senkronizasyon.
+- [MODIFY] `util/BackupImportHelper.kt`: ZIP yedeğini veritabanı ve medyayla birlikte geri yükleme.
+- [NEW] `ui/ArchiveScreen.kt` & `ui/TrashScreen.kt`: Arşivleme ve Geri Dönüşüm Kutusu mantığı.
+
+### 5. Hata Düzeltmeleri (Bug Fixes)
+- [FIX] Ses kaydı esnasındaki çökme sorunu (AudioRecorder/Permission).
+- [FIX] Resimlerin önizleme ve detay panelinde görünmemesi.
+- [FIX] Klasör not sayılarının (Note Count) güncellenmemesi.
 
 ## Verification Plan
 
@@ -38,7 +49,7 @@ Bu plan, uygulamayı profesyonel bir tasarım ve dökümantasyon aracına dönü
 - APK `TayfNotes_v01.25.apk` üretilecek.
 
 ### Manual Verification
-- Koyu temada yazıların beyaz, açık temada siyah olduğu test edilecek.
-- Dropbox/Drive'da "Hesap Seç" ekranının açıldığı doğrulanacak.
-- Sketch ekranında bir kare çizilip içi renkle doldurulacak.
-- Alınan bir yedeğin "İçe Aktar" ile başarılı yüklendiği görülecek.
+- Tablette yan çevirince Master-Detail görünümü ve yazıların belirginliği test edilecek.
+- Dropbox/Drive ile gerçek veri alışverişi denenecek.
+- Sketch ekranında karmaşık şekiller çizilip kaydedilecek.
+- Ses kaydı yapılıp dinlenecek.

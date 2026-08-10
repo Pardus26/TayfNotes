@@ -63,7 +63,6 @@ fun NoteEditorScreen(
     var audioPath by remember { mutableStateOf(note?.audioPath) }
     var sketchData by remember { mutableStateOf(note?.sketchData) }
     
-    // Checklist state
     val initialItems = remember(note) {
         if (note?.type == NoteType.CHECKLIST && note.content.isNotEmpty()) {
             try { Json.decodeFromString<List<ChecklistItem>>(note.content) } catch(e: Exception) { emptyList() }
@@ -89,7 +88,6 @@ fun NoteEditorScreen(
         uri?.let { imageUris = imageUris + it.toString() }
     }
 
-    // Auto-save logic
     LaunchedEffect(title, content, colorHex, reminderTimestamp, folderId, imageUris, audioPath, checklistItems, sketchData) {
         if (title.isNotEmpty() || content.isNotEmpty() || imageUris.isNotEmpty() || audioPath != null || checklistItems.isNotEmpty() || sketchData != null) {
             delay(1000)
@@ -130,132 +128,99 @@ fun NoteEditorScreen(
         }
     }
 
-    fun showDateTimePicker() {
-        val calendar = Calendar.getInstance()
-        reminderTimestamp?.let { calendar.timeInMillis = it }
-        DatePickerDialog(context, { _, year, month, dayOfMonth ->
-            calendar.set(year, month, dayOfMonth)
-            TimePickerDialog(context, { _, hourOfDay, minute ->
-                calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                calendar.set(Calendar.MINUTE, minute)
-                reminderTimestamp = calendar.timeInMillis
-            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
-
-    if (showDeleteDialog && note != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Notu Sil") },
-            text = { Text("Bu notu silmek istediğinize emin misiniz?") },
-            confirmButton = {
-                TextButton(onClick = { 
-                    onDelete(note)
-                    showDeleteDialog = false
-                    onBack()
-                }) { Text("Sil", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Vazgeç") }
-            }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (note == null) "Yeni Not" else "Notu Düzenle") },
+                title = { Text(if (note == null) "Yeni Ekle" else "Düzenle") },
                 navigationIcon = {
-                    IconButton(onClick = if (isSketchMode && note == null && sketchData == null) { { onBack() } } else onBack) { 
+                    IconButton(onClick = onBack) { 
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri") 
                     }
                 },
                 actions = {
-                    if (!isSketchMode) {
-                        IconButton(onClick = { isSketchMode = true }) { Icon(Icons.Default.Gesture, contentDescription = "Sketch") }
-                        IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
-                        IconButton(onClick = {
-                            if (!isRecording) {
-                                val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
-                                audioPath = file.absolutePath
+                    IconButton(onClick = { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.Image, contentDescription = "Resim") }
+                    IconButton(onClick = {
+                        if (!isRecording) {
+                            val file = File(context.cacheDir, "audio_${System.currentTimeMillis()}.m4a")
+                            audioPath = file.absolutePath
+                            try {
                                 recorder.startRecording(file)
                                 isRecording = true
-                            } else { recorder.stopRecording(); isRecording = false }
-                        }) {
-                            Icon(if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, contentDescription = "Ses", tint = if (isRecording) Color.Red else LocalContentColor.current)
-                        }
-                        IconButton(onClick = { showDateTimePicker() }) {
-                            Icon(if (reminderTimestamp == null) Icons.Default.NotificationsNone else Icons.Default.NotificationsActive, contentDescription = "Alarm", tint = if (reminderTimestamp != null) MaterialTheme.colorScheme.primary else LocalContentColor.current)
-                        }
-                        IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
-                            Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
-                        }
-                        if (note != null) {
-                            IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
-                        }
-                    } else {
-                        IconButton(onClick = { isSketchMode = false }) { Icon(Icons.Default.TextFields, contentDescription = "Metin Modu") }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Ses kaydı hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        } else { recorder.stopRecording(); isRecording = false }
+                    }) {
+                        Icon(if (isRecording) Icons.Default.StopCircle else Icons.Default.Mic, contentDescription = "Ses", tint = if (isRecording) Color.Red else LocalContentColor.current)
                     }
-                    IconButton(onClick = onBack) { Icon(Icons.Default.Check, contentDescription = "Tamam") }
+                    IconButton(onClick = { isPreviewMode = !isPreviewMode }) {
+                        Icon(if (isPreviewMode) Icons.Default.Edit else Icons.Default.Visibility, contentDescription = "Önizle")
+                    }
+                    if (note != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, contentDescription = "Sil") }
+                    }
+                    IconButton(onClick = onBack) { Icon(Icons.Default.Check, contentDescription = "Bitti") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor.copy(alpha = 0.8f))
             )
         }
     ) { paddingValues ->
-        if (isSketchMode) {
-            DrawingCanvas(
-                modifier = Modifier.padding(paddingValues),
-                initialData = sketchData,
-                onDataChanged = { sketchData = it }
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(backgroundColor.copy(alpha = 0.1f))
-                    .padding(16.dp)
-            ) {
-                if (!isPreviewMode) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Box {
-                            AssistChip(
-                                onClick = { showFolderMenu = true },
-                                label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
-                                leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                            )
-                            DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
-                                DropdownMenuItem(text = { Text("Klasör Yok") }, onClick = { folderId = null; showFolderMenu = false })
-                                folders.forEach { folder ->
-                                    DropdownMenuItem(text = { Text(folder.name) }, onClick = { folderId = folder.id; showFolderMenu = false })
-                                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(backgroundColor.copy(alpha = 0.1f))
+        ) {
+            if (!isPreviewMode) {
+                // Common Top UI
+                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        AssistChip(
+                            onClick = { showFolderMenu = true },
+                            label = { Text(folders.find { it.id == folderId }?.name ?: "Klasör Seç") },
+                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                        DropdownMenu(expanded = showFolderMenu, onDismissRequest = { showFolderMenu = false }) {
+                            DropdownMenuItem(text = { Text("Klasör Yok") }, onClick = { folderId = null; showFolderMenu = false })
+                            folders.forEach { folder ->
+                                DropdownMenuItem(text = { Text(folder.name) }, onClick = { folderId = folder.id; showFolderMenu = false })
                             }
                         }
-                        ColorSelector(selectedColorHex = colorHex, onColorSelected = { colorHex = it })
                     }
+                    ColorSelector(selectedColorHex = colorHex, onColorSelected = { colorHex = it })
+                }
 
-                    if (reminderTimestamp != null) {
-                        AssistChip(
-                            onClick = { reminderTimestamp = null },
-                            label = { Text("Hatırlatıcı: ${SimpleDateFormat("dd MMM, HH:mm", Locale("tr")).format(Date(reminderTimestamp!!))}") },
-                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Kaldır", modifier = Modifier.size(16.dp)) }
-                        )
-                    }
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                )
 
-                    TextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        placeholder = { Text("Başlık", style = MaterialTheme.typography.headlineSmall) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                        textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                if (isSketchMode) {
+                    DrawingCanvas(
+                        modifier = Modifier.weight(1f),
+                        initialData = sketchData,
+                        onDataChanged = { sketchData = it }
                     )
-
+                    // Extra note for sketch
+                    TextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        placeholder = { Text("Çizim hakkında not...", style = MaterialTheme.typography.bodyMedium) },
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
+                    )
+                } else if (note?.type == NoteType.CHECKLIST || checklistItems.isNotEmpty()) {
+                    ChecklistEditor(items = checklistItems, onItemsChanged = { checklistItems = it })
+                } else {
                     if (imageUris.isNotEmpty()) {
-                        LazyRow(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyRow(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(imageUris) { uri ->
                                 Box {
-                                    AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                                    AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                                     IconButton(onClick = { imageUris = imageUris - uri }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(0.5f), CircleShape)) {
                                         Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                     }
@@ -263,46 +228,36 @@ fun NoteEditorScreen(
                             }
                         }
                     }
-
-                    if (note?.type == NoteType.CHECKLIST || checklistItems.isNotEmpty()) {
-                        ChecklistEditor(items = checklistItems, onItemsChanged = { checklistItems = it })
-                    } else {
-                        TextField(
-                            value = content,
-                            onValueChange = { content = it },
-                            placeholder = { Text("Notunuzu yazın...", style = MaterialTheme.typography.bodyLarge) },
-                            modifier = Modifier.fillMaxSize().weight(1f),
-                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                            textStyle = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                } else {
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        val displayTitle = if (title.isEmpty() && checklistItems.isNotEmpty()) {
-                            checklistItems.firstOrNull()?.text ?: "Başlıksız Not"
-                        } else if (title.isEmpty()) {
-                            "Başlıksız Not"
-                        } else {
-                            title
-                        }
-                        
-                        Text(displayTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (checklistItems.isNotEmpty()) {
-                            checklistItems.forEach { item ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
-                                    Text(item.text, style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge)
-                                }
+                    TextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        placeholder = { Text("Notunuzu yazın...", style = MaterialTheme.typography.bodyLarge) },
+                        modifier = Modifier.fillMaxSize().weight(1f).padding(16.dp),
+                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                        textStyle = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                // Preview Mode
+                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+                    Text(title.ifEmpty { "Başlıksız Not" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (checklistItems.isNotEmpty()) {
+                        checklistItems.forEach { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = item.isChecked, onCheckedChange = null, enabled = false)
+                                Text(item.text, style = if (item.isChecked) MaterialTheme.typography.bodyLarge.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough) else MaterialTheme.typography.bodyLarge)
                             }
-                        } else {
-                            Text(content, style = MaterialTheme.typography.bodyLarge)
                         }
-                        
-                        if (sketchData != null && sketchData!!.isNotEmpty()) {
-                             Spacer(modifier = Modifier.height(24.dp))
-                             Text("Sketch Çizimi (Düzenlemek için Sketch Moduna Geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                        }
+                    } else {
+                        Text(content, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    if (sketchData?.isNotEmpty() == true) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text("Çizim İçeriyor (Görüntülemek için Sketch moduna geçin)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    imageUris.forEach { uri ->
+                        AsyncImage(model = uri, contentDescription = null, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.FillWidth)
                     }
                 }
             }

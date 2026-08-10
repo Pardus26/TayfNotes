@@ -5,6 +5,9 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -17,7 +20,7 @@ enum class TayfTheme {
  * Extension to get a high-contrast color (Black or White) based on background luminance
  */
 fun Color.contentColor(): Color {
-    return if (this.luminance() > 0.5f) Color.Black else Color.White
+    return if (this.luminance() > 0.45f) Color.Black else Color.White
 }
 
 private fun getDarkColorScheme(theme: TayfTheme) = darkColorScheme(
@@ -39,7 +42,8 @@ private fun getDarkColorScheme(theme: TayfTheme) = darkColorScheme(
     onPrimary = Color.Black,
     onBackground = Color.White,
     onSurface = Color.White,
-    onSurfaceVariant = Color.LightGray
+    onSurfaceVariant = Color.LightGray,
+    outline = Color.White.copy(alpha = 0.5f)
 )
 
 private fun getLightColorScheme(theme: TayfTheme) = lightColorScheme(
@@ -61,7 +65,8 @@ private fun getLightColorScheme(theme: TayfTheme) = lightColorScheme(
     onPrimary = Color.White,
     onBackground = MidnightBlue,
     onSurface = MidnightBlue,
-    onSurfaceVariant = Color.DarkGray
+    onSurfaceVariant = Color.DarkGray,
+    outline = Color.Black.copy(alpha = 0.5f)
 )
 
 @Composable

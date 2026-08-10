@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.eldora25.tayfnotes.Screen
@@ -32,7 +31,6 @@ fun MoreScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Profile Section (Image 10)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -57,12 +55,11 @@ fun MoreScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Grid Menu (Image 10)
             val menuItems = listOf(
                 MenuItem("Tüm notlar", Icons.Default.Description, Screen.Main),
-                MenuItem("Arşiv", Icons.Default.Archive, Screen.Main),
-                MenuItem("Çöp Kutusu", Icons.Default.Delete, Screen.Main),
-                MenuItem("Tema", Icons.Default.Palette, Screen.Main),
+                MenuItem("Arşiv", Icons.Default.Archive, Screen.Archive),
+                MenuItem("Çöp Kutusu", Icons.Default.Delete, Screen.Trash),
+                MenuItem("Tema", Icons.Default.Palette, Screen.Settings), // Or specialized theme screen
                 MenuItem("Ayarlar", Icons.Default.Settings, Screen.Settings)
             )
 
@@ -78,7 +75,7 @@ fun MoreScreen(
                             .clickable { onScreenChange(item.screen) }
                             .padding(8.dp)
                     ) {
-                        Icon(item.icon, contentDescription = null, modifier = Modifier.size(32.dp))
+                        Icon(item.icon, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(item.title, style = MaterialTheme.typography.labelMedium)
                     }
