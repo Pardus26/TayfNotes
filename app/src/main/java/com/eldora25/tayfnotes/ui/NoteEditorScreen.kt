@@ -1,7 +1,5 @@
 package com.eldora25.tayfnotes.ui
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.widget.Toast
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -45,8 +43,6 @@ import com.eldora25.tayfnotes.shared.model.NoteType
 import com.eldora25.tayfnotes.ui.components.ChecklistEditor
 import com.eldora25.tayfnotes.ui.components.ColorSelector
 import com.eldora25.tayfnotes.ui.components.DrawingCanvas
-
-import com.eldora25.tayfnotes.ui.theme.EditorNeonIcon
 
 import com.eldora25.tayfnotes.util.AudioRecorder
 import com.eldora25.tayfnotes.util.FileExportHelper
@@ -128,14 +124,18 @@ fun NoteEditorScreen(
         ) {
 
             try {
+
                 Json.decodeFromString<List<ChecklistItem>>(
                     note.content
                 )
+
             } catch (_: Exception) {
+
                 emptyList()
             }
 
         } else {
+
             emptyList()
         }
     }
@@ -356,13 +356,10 @@ fun NoteEditorScreen(
                         onClick = onBack
                     ) {
 
-                        EditorNeonIcon {
-
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Geri"
-                            )
-                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Geri"
+                        )
                     }
                 },
 
@@ -386,13 +383,10 @@ fun NoteEditorScreen(
                             }
                         ) {
 
-                            EditorNeonIcon {
-
-                                Icon(
-                                    Icons.Default.Gesture,
-                                    contentDescription = "Sketch"
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Gesture,
+                                contentDescription = "Sketch"
+                            )
                         }
 
                         /*
@@ -405,13 +399,10 @@ fun NoteEditorScreen(
                             }
                         ) {
 
-                            EditorNeonIcon {
-
-                                Icon(
-                                    Icons.Default.Image,
-                                    contentDescription = "Resim"
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = "Resim"
+                            )
                         }
 
                         /*
@@ -460,25 +451,22 @@ fun NoteEditorScreen(
 
                         ) {
 
-                            EditorNeonIcon {
+                            Icon(
 
-                                Icon(
+                                if (isRecording)
+                                    Icons.Default.StopCircle
+                                else
+                                    Icons.Default.Mic,
 
+                                contentDescription =
+                                    "Ses",
+
+                                tint =
                                     if (isRecording)
-                                        Icons.Default.StopCircle
+                                        Color.Red
                                     else
-                                        Icons.Default.Mic,
-
-                                    contentDescription =
-                                        "Ses",
-
-                                    tint =
-                                        if (isRecording)
-                                            Color.Red
-                                        else
-                                            Color(0xFFFFD700)
-                                )
-                            }
+                                        Color(0xFFFFD700)
+                            )
                         }
 
                         /*
@@ -497,7 +485,9 @@ fun NoteEditorScreen(
                                         title = title,
 
                                         content =
-                                            if (checklistItems.isNotEmpty())
+                                            if (
+                                                checklistItems.isNotEmpty()
+                                            )
                                                 Json.encodeToString(
                                                     checklistItems
                                                 )
@@ -516,13 +506,10 @@ fun NoteEditorScreen(
 
                         ) {
 
-                            EditorNeonIcon {
-
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = "Paylaş"
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = "Paylaş"
+                            )
                         }
 
                         /*
@@ -538,19 +525,16 @@ fun NoteEditorScreen(
 
                         ) {
 
-                            EditorNeonIcon {
+                            Icon(
 
-                                Icon(
+                                if (isPreviewMode)
+                                    Icons.Default.Edit
+                                else
+                                    Icons.Default.Visibility,
 
-                                    if (isPreviewMode)
-                                        Icons.Default.Edit
-                                    else
-                                        Icons.Default.Visibility,
-
-                                    contentDescription =
-                                        "Önizle"
-                                )
-                            }
+                                contentDescription =
+                                    "Önizle"
+                            )
                         }
 
                         /*
@@ -567,13 +551,10 @@ fun NoteEditorScreen(
 
                             ) {
 
-                                EditorNeonIcon {
-
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Sil"
-                                    )
-                                }
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Sil"
+                                )
                             }
                         }
 
@@ -593,14 +574,11 @@ fun NoteEditorScreen(
 
                         ) {
 
-                            EditorNeonIcon {
-
-                                Icon(
-                                    Icons.Default.TextFields,
-                                    contentDescription =
-                                        "Metin Modu"
-                                )
-                            }
+                            Icon(
+                                Icons.Default.TextFields,
+                                contentDescription =
+                                    "Metin Modu"
+                            )
                         }
                     }
 
@@ -612,13 +590,10 @@ fun NoteEditorScreen(
                         onClick = onBack
                     ) {
 
-                        EditorNeonIcon {
-
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = "Bitti"
-                            )
-                        }
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Bitti"
+                        )
                     }
                 },
 
@@ -639,11 +614,7 @@ fun NoteEditorScreen(
          * ROOT EDITOR AREA
          * --------------------------------------------------------------------
          *
-         * IMPORTANT:
-         *
-         * The drawing surface is NOT allowed to cover this whole root.
-         *
-         * The drawing canvas receives its own bounded Box below.
+         * DrawingCanvas yalnızca kendisine verilen alan içerisinde çalışır.
          */
 
         Column(
@@ -784,8 +755,6 @@ fun NoteEditorScreen(
                  * ----------------------------------------------------------------
                  * TITLE AREA
                  * ----------------------------------------------------------------
-                 *
-                 * Title is completely outside DrawingCanvas.
                  */
 
                 TextField(
@@ -849,18 +818,9 @@ fun NoteEditorScreen(
                 if (isSketchMode) {
 
                     /*
-                     * IMPORTANT DRAWING BOUNDARY
+                     * DRAWING BOUNDARY
                      *
-                     * DrawingCanvas is isolated inside this Box.
-                     *
-                     * It cannot draw outside this area.
-                     *
-                     * Therefore:
-                     *
-                     * - Title is protected
-                     * - Top metadata/menu is protected
-                     * - Bottom note field is protected
-                     * - Eraser cannot visually extend outside canvas area
+                     * DrawingCanvas bu Box'ın dışına çıkamaz.
                      */
 
                     Box(
@@ -899,8 +859,6 @@ fun NoteEditorScreen(
                      * ----------------------------------------------------------------
                      * BOTTOM NOTE / DESCRIPTION AREA
                      * ----------------------------------------------------------------
-                     *
-                     * This is outside DrawingCanvas.
                      */
 
                     TextField(
