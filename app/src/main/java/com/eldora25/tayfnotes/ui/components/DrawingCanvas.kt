@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.eldora25.tayfnotes.ui.components
 
 import android.graphics.Color as AndroidColor
@@ -32,12 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.rotate
-
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -465,7 +464,9 @@ fun DrawingCanvas(
 
     val imagePicker =
         rememberLauncherForActivityResult(
+
             ActivityResultContracts.GetContent()
+
         ) { uri ->
 
             uri ?: return@rememberLauncherForActivityResult
@@ -735,6 +736,7 @@ fun DrawingCanvas(
                 .fillMaxSize()
                 .clipToBounds()
                 .background(Color.White)
+
     ) {
 
         Surface(
@@ -1354,8 +1356,10 @@ fun DrawingCanvas(
 
 
                 IconButton(
+
                     onClick =
                         ::clearCanvas
+
                 ) {
 
                     Icon(
@@ -1430,6 +1434,17 @@ fun DrawingCanvas(
                     Modifier
                         .fillMaxSize()
                         .clipToBounds()
+
+                        /*
+                         * IMPORTANT:
+                         *
+                         * pointerInteropFilter is an
+                         * ExperimentalComposeUiApi.
+                         *
+                         * The file-level OptIn at the top
+                         * of this file authorizes its use.
+                         */
+
                         .pointerInteropFilter { event ->
 
                             val action =
@@ -1697,6 +1712,7 @@ fun DrawingCanvas(
             ) {
 
                 document.paths.forEach {
+
                     drawDataPath(it)
                 }
 
@@ -1880,6 +1896,7 @@ private fun ToolButton(
                     onValueChange = {
 
                         onSettingsChanged(
+
                             settings.copy(
                                 size = it
                             )
@@ -1918,6 +1935,7 @@ private fun ToolButton(
                         onValueChange = {
 
                             onSettingsChanged(
+
                                 settings.copy(
                                     opacity = it
                                 )
@@ -1951,6 +1969,7 @@ private fun ToolButton(
                         10f,
                         20f,
                         40f
+
                     ).forEach { size ->
 
                         OutlinedButton(
@@ -1967,6 +1986,7 @@ private fun ToolButton(
                                     )
 
                                 onSettingsChanged(
+
                                     settings.copy(
                                         size =
                                             newSize
@@ -2055,6 +2075,7 @@ private fun ColorPalettePopup(
 
             val hues =
                 listOf(
+
                     0f,
                     30f,
                     60f,
@@ -2072,6 +2093,7 @@ private fun ColorPalettePopup(
 
             val values =
                 listOf(
+
                     1f,
                     0.85f,
                     0.70f,
@@ -2101,10 +2123,14 @@ private fun ColorPalettePopup(
 
                             val color =
                                 Color.hsv(
+
                                     hue = hue,
+
                                     saturation = 1f,
+
                                     value = value
                                 )
+
 
                             Box(
 
@@ -2165,15 +2191,10 @@ private fun ColorPalettePopup(
                     listOf(
 
                         Color.Blue,
-
                         Color.Red,
-
                         Color(0xFFFF9800),
-
                         Color.Yellow,
-
                         Color.Green,
-
                         Color.Black
                     )
 
@@ -2996,7 +3017,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
         )
 
 
-        val fibers = 9
+        val fibers =
+            9
 
 
         for (fiber in 0 until fibers) {
@@ -3245,7 +3267,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
             color =
                 color.copy(
-                    alpha = alpha
+                    alpha =
+                        alpha
                 ),
 
             radius =
@@ -3306,7 +3329,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
             color =
                 color.copy(
-                    alpha = alpha
+                    alpha =
+                        alpha
                 ),
 
             start =
@@ -3336,7 +3360,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
         color =
             color.copy(
-                alpha = alpha
+                alpha =
+                    alpha
             ),
 
         radius =
@@ -3357,7 +3382,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
         color =
             color.copy(
-                alpha = alpha
+                alpha =
+                    alpha
             ),
 
         radius =
@@ -3411,36 +3437,100 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
     val bottom =
         top + height
 
-    drawLine(
-        color = color,
-        start = Offset(left, top),
-        end = Offset(right, top),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Butt
-    )
 
     drawLine(
+
         color = color,
-        start = Offset(right, top),
-        end = Offset(right, bottom),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Butt
+
+        start =
+            Offset(
+                left,
+                top
+            ),
+
+        end =
+            Offset(
+                right,
+                top
+            ),
+
+        strokeWidth =
+            strokeWidth,
+
+        cap =
+            StrokeCap.Butt
     )
 
-    drawLine(
-        color = color,
-        start = Offset(right, bottom),
-        end = Offset(left, bottom),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Butt
-    )
 
     drawLine(
+
         color = color,
-        start = Offset(left, bottom),
-        end = Offset(left, top),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Butt
+
+        start =
+            Offset(
+                right,
+                top
+            ),
+
+        end =
+            Offset(
+                right,
+                bottom
+            ),
+
+        strokeWidth =
+            strokeWidth,
+
+        cap =
+            StrokeCap.Butt
+    )
+
+
+    drawLine(
+
+        color = color,
+
+        start =
+            Offset(
+                right,
+                bottom
+            ),
+
+        end =
+            Offset(
+                left,
+                bottom
+            ),
+
+        strokeWidth =
+            strokeWidth,
+
+        cap =
+            StrokeCap.Butt
+    )
+
+
+    drawLine(
+
+        color = color,
+
+        start =
+            Offset(
+                left,
+                bottom
+            ),
+
+        end =
+            Offset(
+                left,
+                top
+            ),
+
+        strokeWidth =
+            strokeWidth,
+
+        cap =
+            StrokeCap.Butt
     )
 }
 
@@ -3494,7 +3584,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
     var previous =
         Offset(
-            centerX + radiusX,
+
+            centerX +
+                radiusX,
+
             centerY
         )
 
@@ -3629,11 +3722,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
         val angle =
             Math.toRadians(
+
                 (
                     startAngleDegrees +
                         sweepAngleDegrees *
                         progress
                 ).toDouble()
+
             ).toFloat()
 
 
@@ -3697,14 +3792,18 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
     val start =
         Offset(
+
             data.points[0].x,
+
             data.points[0].y
         )
 
 
     val end =
         Offset(
+
             data.points[1].x,
+
             data.points[1].y
         )
 
@@ -3725,6 +3824,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
     val width =
         abs(
+
             start.x -
                 end.x
         )
@@ -3732,6 +3832,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
     val height =
         abs(
+
             start.y -
                 end.y
         )
@@ -3862,13 +3963,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
                 topLeft =
                     Offset(
-                        center.x - radius,
-                        center.y - radius
+
+                        center.x -
+                            radius,
+
+                        center.y -
+                            radius
                     ),
 
                 size =
                     Size(
+
                         radius * 2f,
+
                         radius * 2f
                     ),
 
@@ -3901,8 +4008,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                     )
 
                     lineTo(
+
                         left,
-                        top + height
+
+                        top +
+                            height
                     )
 
                     lineTo(
@@ -3910,7 +4020,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                         left +
                             width,
 
-                        top + height
+                        top +
+                            height
                     )
 
                     close()
@@ -3920,7 +4031,9 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             if (data.isFilled) {
 
                 drawPath(
+
                     path,
+
                     fillColor
                 )
             }
@@ -3928,45 +4041,89 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
             val p1 =
                 Offset(
-                    left + width / 2f,
+
+                    left +
+                        width / 2f,
+
                     top
                 )
 
+
             val p2 =
                 Offset(
+
                     left,
-                    top + height
+
+                    top +
+                        height
                 )
+
 
             val p3 =
                 Offset(
-                    left + width,
-                    top + height
+
+                    left +
+                        width,
+
+                    top +
+                        height
                 )
 
 
             drawLine(
-                color = strokeColor,
-                start = p1,
-                end = p2,
-                strokeWidth = data.strokeWidth,
-                cap = StrokeCap.Round
+
+                color =
+                    strokeColor,
+
+                start =
+                    p1,
+
+                end =
+                    p2,
+
+                strokeWidth =
+                    data.strokeWidth,
+
+                cap =
+                    StrokeCap.Round
             )
 
-            drawLine(
-                color = strokeColor,
-                start = p2,
-                end = p3,
-                strokeWidth = data.strokeWidth,
-                cap = StrokeCap.Round
-            )
 
             drawLine(
-                color = strokeColor,
-                start = p3,
-                end = p1,
-                strokeWidth = data.strokeWidth,
-                cap = StrokeCap.Round
+
+                color =
+                    strokeColor,
+
+                start =
+                    p2,
+
+                end =
+                    p3,
+
+                strokeWidth =
+                    data.strokeWidth,
+
+                cap =
+                    StrokeCap.Round
+            )
+
+
+            drawLine(
+
+                color =
+                    strokeColor,
+
+                start =
+                    p3,
+
+                end =
+                    p1,
+
+                strokeWidth =
+                    data.strokeWidth,
+
+                cap =
+                    StrokeCap.Round
             )
         }
 
