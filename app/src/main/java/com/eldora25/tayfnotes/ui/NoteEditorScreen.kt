@@ -3,8 +3,10 @@ package com.eldora25.tayfnotes.ui
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.widget.Toast
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,33 +15,49 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+
 import coil.compose.AsyncImage
+
 import com.eldora25.tayfnotes.shared.model.ChecklistItem
 import com.eldora25.tayfnotes.shared.model.Folder
 import com.eldora25.tayfnotes.shared.model.Note
 import com.eldora25.tayfnotes.shared.model.NoteType
+
 import com.eldora25.tayfnotes.ui.components.ChecklistEditor
 import com.eldora25.tayfnotes.ui.components.ColorSelector
 import com.eldora25.tayfnotes.ui.components.DrawingCanvas
-import com.eldora25.tayfnotes.ui.theme.NeonIcon
+
+import com.eldora25.tayfnotes.ui.theme.EditorNeonIcon
+
 import com.eldora25.tayfnotes.util.AudioRecorder
+import com.eldora25.tayfnotes.util.FileExportHelper
+
 import kotlinx.coroutines.delay
+
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
 import java.io.File
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,23 +69,18 @@ fun NoteEditorScreen(
     onSave: (Note) -> Unit,
     onDelete: (Note) -> Unit
 ) {
+
     val context = LocalContext.current
 
     /*
-     * ------------------------------------------------------------
-     * NOTE ID
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
+     * NOTE STATE
+     * ------------------------------------------------------------------------
      */
 
     val noteId = remember {
         note?.id ?: System.currentTimeMillis().toString()
     }
-
-    /*
-     * ------------------------------------------------------------
-     * NOTE STATE
-     * ------------------------------------------------------------
-     */
 
     var title by remember {
         mutableStateOf(note?.title ?: "")
@@ -89,45 +102,22 @@ fun NoteEditorScreen(
         mutableStateOf(note?.folderId)
     }
 
-    /*
-     * ------------------------------------------------------------
-     * NORMAL NOTE IMAGES
-     * ------------------------------------------------------------
-     *
-     * These images belong to the normal note.
-     * They are intentionally kept separate from sketch data.
-     */
-
     var imageUris by remember {
-        mutableStateOf(
-            note?.imageUris ?: emptyList()
-        )
+        mutableStateOf(note?.imageUris ?: emptyList())
     }
-
-    /*
-     * ------------------------------------------------------------
-     * AUDIO
-     * ------------------------------------------------------------
-     */
 
     var audioPath by remember {
         mutableStateOf(note?.audioPath)
     }
-
-    /*
-     * ------------------------------------------------------------
-     * SKETCH DATA
-     * ------------------------------------------------------------
-     */
 
     var sketchData by remember {
         mutableStateOf(note?.sketchData)
     }
 
     /*
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      * CHECKLIST
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      */
 
     val initialItems = remember(note) {
@@ -138,18 +128,14 @@ fun NoteEditorScreen(
         ) {
 
             try {
-
                 Json.decodeFromString<List<ChecklistItem>>(
                     note.content
                 )
-
             } catch (_: Exception) {
-
                 emptyList()
             }
 
         } else {
-
             emptyList()
         }
     }
@@ -159,9 +145,9 @@ fun NoteEditorScreen(
     }
 
     /*
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      * UI STATE
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      */
 
     var isPreviewMode by remember {
@@ -170,8 +156,7 @@ fun NoteEditorScreen(
 
     var isSketchMode by remember {
         mutableStateOf(
-            initialSketch ||
-                sketchData != null
+            initialSketch || sketchData != null
         )
     }
 
@@ -184,9 +169,9 @@ fun NoteEditorScreen(
     }
 
     /*
-     * ------------------------------------------------------------
-     * AUDIO RECORDER
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
+     * AUDIO
+     * ------------------------------------------------------------------------
      */
 
     val recorder = remember {
@@ -198,29 +183,26 @@ fun NoteEditorScreen(
     }
 
     /*
-     * ------------------------------------------------------------
-     * BACKGROUND COLOR
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
+     * NOTE BACKGROUND
+     * ------------------------------------------------------------------------
      */
 
-    val backgroundColor =
-        try {
+    val backgroundColor = try {
 
-            Color(
-                android.graphics.Color.parseColor(
-                    colorHex
-                )
-            )
+        Color(
+            android.graphics.Color.parseColor(colorHex)
+        )
 
-        } catch (_: Exception) {
+    } catch (_: Exception) {
 
-            MaterialTheme.colorScheme.surface
-        }
+        MaterialTheme.colorScheme.surface
+    }
 
     /*
-     * ------------------------------------------------------------
-     * NORMAL NOTE IMAGE PICKER
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
+     * IMAGE PICKER
+     * ------------------------------------------------------------------------
      */
 
     val galleryLauncher =
@@ -236,9 +218,9 @@ fun NoteEditorScreen(
         }
 
     /*
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      * AUTO SAVE
-     * ------------------------------------------------------------
+     * ------------------------------------------------------------------------
      */
 
     LaunchedEffect(
@@ -264,27 +246,13 @@ fun NoteEditorScreen(
 
             delay(1000)
 
-            /*
-             * ----------------------------------------------------
-             * FINAL CONTENT
-             * ----------------------------------------------------
-             */
-
             var finalContent = content
 
             if (checklistItems.isNotEmpty()) {
 
                 finalContent =
-                    Json.encodeToString(
-                        checklistItems
-                    )
+                    Json.encodeToString(checklistItems)
             }
-
-            /*
-             * ----------------------------------------------------
-             * AUTOMATIC TITLE
-             * ----------------------------------------------------
-             */
 
             var finalTitle = title
 
@@ -308,64 +276,55 @@ fun NoteEditorScreen(
                     finalTitle =
                         textForTitle
                             .trim()
-                            .split(
-                                "\\s+".toRegex()
-                            )
+                            .split("\\s+".toRegex())
                             .take(5)
                             .joinToString(" ")
                 }
             }
 
-            /*
-             * ----------------------------------------------------
-             * CREATE NOTE
-             * ----------------------------------------------------
-             */
+            val finalNote = Note(
 
-            val finalNote =
-                Note(
-                    id = noteId,
-                    title = finalTitle,
-                    content = finalContent,
-                    colorHex = colorHex,
+                id = noteId,
 
-                    type =
-                        if (checklistItems.isNotEmpty()) {
+                title = finalTitle,
 
-                            NoteType.CHECKLIST
+                content = finalContent,
 
-                        } else {
+                colorHex = colorHex,
 
-                            NoteType.TEXT
-                        },
+                type =
+                    if (checklistItems.isNotEmpty())
+                        NoteType.CHECKLIST
+                    else
+                        NoteType.TEXT,
 
-                    reminderTimestamp =
-                        reminderTimestamp,
+                reminderTimestamp =
+                    reminderTimestamp,
 
-                    folderId =
-                        folderId,
+                folderId =
+                    folderId,
 
-                    imageUris =
-                        imageUris,
+                imageUris =
+                    imageUris,
 
-                    audioPath =
-                        audioPath,
+                audioPath =
+                    audioPath,
 
-                    sketchData =
-                        sketchData,
+                sketchData =
+                    sketchData,
 
-                    lastModified =
-                        System.currentTimeMillis()
-                )
+                lastModified =
+                    System.currentTimeMillis()
+            )
 
             onSave(finalNote)
         }
     }
 
     /*
-     * ============================================================
+     * ------------------------------------------------------------------------
      * MAIN SCAFFOLD
-     * ============================================================
+     * ------------------------------------------------------------------------
      */
 
     Scaffold(
@@ -377,13 +336,15 @@ fun NoteEditorScreen(
                 title = {
 
                     Text(
-                        if (note == null) {
+
+                        if (note == null)
                             "Yeni Ekle"
-                        } else {
-                            "Düzenle"
-                        },
+                        else
+                            "Düzenle",
+
                         style =
                             MaterialTheme.typography.titleMedium,
+
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -395,15 +356,11 @@ fun NoteEditorScreen(
                         onClick = onBack
                     ) {
 
-                        NeonIcon(
-                            backgroundColor =
-                                backgroundColor
-                        ) {
+                        EditorNeonIcon {
 
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription =
-                                    "Geri"
+                                contentDescription = "Geri"
                             )
                         }
                     }
@@ -412,17 +369,15 @@ fun NoteEditorScreen(
                 actions = {
 
                     /*
-                     * =================================================
+                     * --------------------------------------------------------
                      * NORMAL NOTE MODE
-                     * =================================================
+                     * --------------------------------------------------------
                      */
 
                     if (!isSketchMode) {
 
                         /*
-                         * -------------------------------------------------
-                         * ENTER SKETCH MODE
-                         * -------------------------------------------------
+                         * Sketch mode
                          */
 
                         IconButton(
@@ -431,54 +386,40 @@ fun NoteEditorScreen(
                             }
                         ) {
 
-                            NeonIcon(
-                                backgroundColor =
-                                    backgroundColor
-                            ) {
+                            EditorNeonIcon {
 
                                 Icon(
                                     Icons.Default.Gesture,
-                                    contentDescription =
-                                        "Sketch"
+                                    contentDescription = "Sketch"
                                 )
                             }
                         }
 
                         /*
-                         * -------------------------------------------------
-                         * ADD IMAGE TO NORMAL NOTE
-                         * -------------------------------------------------
+                         * Gallery
                          */
 
                         IconButton(
                             onClick = {
-
-                                galleryLauncher.launch(
-                                    "image/*"
-                                )
+                                galleryLauncher.launch("image/*")
                             }
                         ) {
 
-                            NeonIcon(
-                                backgroundColor =
-                                    backgroundColor
-                            ) {
+                            EditorNeonIcon {
 
                                 Icon(
                                     Icons.Default.Image,
-                                    contentDescription =
-                                        "Resim"
+                                    contentDescription = "Resim"
                                 )
                             }
                         }
 
                         /*
-                         * -------------------------------------------------
-                         * AUDIO
-                         * -------------------------------------------------
+                         * Audio recording
                          */
 
                         IconButton(
+
                             onClick = {
 
                                 if (!isRecording) {
@@ -498,8 +439,7 @@ fun NoteEditorScreen(
                                             file
                                         )
 
-                                        isRecording =
-                                            true
+                                        isRecording = true
 
                                     } catch (_: Exception) {
 
@@ -514,71 +454,98 @@ fun NoteEditorScreen(
 
                                     recorder.stopRecording()
 
-                                    isRecording =
-                                        false
+                                    isRecording = false
                                 }
                             }
+
                         ) {
 
-                            NeonIcon(
-                                backgroundColor =
-                                    backgroundColor
-                            ) {
+                            EditorNeonIcon {
 
                                 Icon(
-                                    if (isRecording) {
 
+                                    if (isRecording)
                                         Icons.Default.StopCircle
-
-                                    } else {
-
-                                        Icons.Default.Mic
-                                    },
+                                    else
+                                        Icons.Default.Mic,
 
                                     contentDescription =
                                         "Ses",
 
                                     tint =
-                                        if (isRecording) {
-
+                                        if (isRecording)
                                             Color.Red
-
-                                        } else {
-
-                                            LocalContentColor.current
-                                        }
+                                        else
+                                            Color(0xFFFFD700)
                                 )
                             }
                         }
 
                         /*
-                         * -------------------------------------------------
-                         * PREVIEW
-                         * -------------------------------------------------
+                         * Share
                          */
 
                         IconButton(
+
                             onClick = {
 
+                                val currentNote =
+                                    Note(
+
+                                        id = noteId,
+
+                                        title = title,
+
+                                        content =
+                                            if (checklistItems.isNotEmpty())
+                                                Json.encodeToString(
+                                                    checklistItems
+                                                )
+                                            else
+                                                content,
+
+                                        colorHex = colorHex
+                                    )
+
+                                FileExportHelper
+                                    .exportNoteToTxt(
+                                        context,
+                                        currentNote
+                                    )
+                            }
+
+                        ) {
+
+                            EditorNeonIcon {
+
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = "Paylaş"
+                                )
+                            }
+                        }
+
+                        /*
+                         * Preview
+                         */
+
+                        IconButton(
+
+                            onClick = {
                                 isPreviewMode =
                                     !isPreviewMode
                             }
+
                         ) {
 
-                            NeonIcon(
-                                backgroundColor =
-                                    backgroundColor
-                            ) {
+                            EditorNeonIcon {
 
                                 Icon(
-                                    if (isPreviewMode) {
 
+                                    if (isPreviewMode)
                                         Icons.Default.Edit
-
-                                    } else {
-
-                                        Icons.Default.Visibility
-                                    },
+                                    else
+                                        Icons.Default.Visibility,
 
                                     contentDescription =
                                         "Önizle"
@@ -587,28 +554,24 @@ fun NoteEditorScreen(
                         }
 
                         /*
-                         * -------------------------------------------------
-                         * DELETE
-                         * -------------------------------------------------
+                         * Delete
                          */
 
                         if (note != null) {
 
                             IconButton(
+
                                 onClick = {
                                     showDeleteDialog = true
                                 }
+
                             ) {
 
-                                NeonIcon(
-                                    backgroundColor =
-                                        backgroundColor
-                                ) {
+                                EditorNeonIcon {
 
                                     Icon(
                                         Icons.Default.Delete,
-                                        contentDescription =
-                                            "Sil"
+                                        contentDescription = "Sil"
                                     )
                                 }
                             }
@@ -617,28 +580,20 @@ fun NoteEditorScreen(
                     } else {
 
                         /*
-                         * =================================================
+                         * ----------------------------------------------------
                          * SKETCH MODE
-                         * =================================================
-                         *
-                         * DrawingCanvas currently supports drawing,
-                         * shapes, colors, fills, marker and eraser.
-                         *
-                         * Image insertion is intentionally not passed
-                         * here because DrawingCanvas does not currently
-                         * expose image parameters.
+                         * ----------------------------------------------------
                          */
 
                         IconButton(
+
                             onClick = {
                                 isSketchMode = false
                             }
+
                         ) {
 
-                            NeonIcon(
-                                backgroundColor =
-                                    backgroundColor
-                            ) {
+                            EditorNeonIcon {
 
                                 Icon(
                                     Icons.Default.TextFields,
@@ -650,24 +605,18 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * -----------------------------------------------------
-                     * FINISH / SAVE
-                     * -----------------------------------------------------
+                     * Finish
                      */
 
                     IconButton(
                         onClick = onBack
                     ) {
 
-                        NeonIcon(
-                            backgroundColor =
-                                backgroundColor
-                        ) {
+                        EditorNeonIcon {
 
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription =
-                                    "Bitti"
+                                contentDescription = "Bitti"
                             )
                         }
                     }
@@ -685,7 +634,20 @@ fun NoteEditorScreen(
 
     ) { paddingValues ->
 
+        /*
+         * --------------------------------------------------------------------
+         * ROOT EDITOR AREA
+         * --------------------------------------------------------------------
+         *
+         * IMPORTANT:
+         *
+         * The drawing surface is NOT allowed to cover this whole root.
+         *
+         * The drawing canvas receives its own bounded Box below.
+         */
+
         Column(
+
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -697,25 +659,23 @@ fun NoteEditorScreen(
                     )
         ) {
 
-            /*
-             * =========================================================
-             * EDIT MODE
-             * =========================================================
-             */
-
             if (!isPreviewMode) {
 
                 /*
-                 * -----------------------------------------------------
-                 * COMMON NOTE HEADER
-                 * -----------------------------------------------------
+                 * ----------------------------------------------------------------
+                 * TOP METADATA AREA
+                 * ----------------------------------------------------------------
                  */
 
                 Row(
+
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(
+                                horizontal = 16.dp,
+                                vertical = 8.dp
+                            ),
 
                     horizontalArrangement =
                         Arrangement.SpaceBetween,
@@ -725,7 +685,7 @@ fun NoteEditorScreen(
                 ) {
 
                     /*
-                     * FOLDER
+                     * Folder selector
                      */
 
                     Box {
@@ -767,11 +727,8 @@ fun NoteEditorScreen(
                             onDismissRequest = {
                                 showFolderMenu = false
                             }
-                        ) {
 
-                            /*
-                             * NO FOLDER
-                             */
+                        ) {
 
                             DropdownMenuItem(
 
@@ -783,14 +740,9 @@ fun NoteEditorScreen(
 
                                     folderId = null
 
-                                    showFolderMenu =
-                                        false
+                                    showFolderMenu = false
                                 }
                             )
-
-                            /*
-                             * FOLDERS
-                             */
 
                             folders.forEach { folder ->
 
@@ -814,7 +766,7 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * COLOR
+                     * Note background color
                      */
 
                     ColorSelector(
@@ -829,9 +781,11 @@ fun NoteEditorScreen(
                 }
 
                 /*
-                 * -----------------------------------------------------
-                 * TITLE
-                 * -----------------------------------------------------
+                 * ----------------------------------------------------------------
+                 * TITLE AREA
+                 * ----------------------------------------------------------------
+                 *
+                 * Title is completely outside DrawingCanvas.
                  */
 
                 TextField(
@@ -847,7 +801,9 @@ fun NoteEditorScreen(
                         Text(
                             "Başlık",
                             style =
-                                MaterialTheme.typography.headlineSmall
+                                MaterialTheme
+                                    .typography
+                                    .headlineSmall
                         )
                     },
 
@@ -875,7 +831,9 @@ fun NoteEditorScreen(
                         ),
 
                     textStyle =
-                        MaterialTheme.typography.headlineSmall
+                        MaterialTheme
+                            .typography
+                            .headlineSmall
                             .copy(
                                 fontWeight =
                                     FontWeight.Bold
@@ -883,26 +841,66 @@ fun NoteEditorScreen(
                 )
 
                 /*
-                 * =====================================================
+                 * ----------------------------------------------------------------
                  * SKETCH MODE
-                 * =====================================================
+                 * ----------------------------------------------------------------
                  */
 
                 if (isSketchMode) {
 
-                    DrawingCanvas(
-    modifier = Modifier.weight(1f),
-    initialData = sketchData,
-    onDataChanged = { sketchData = it },
-    onAddImage = {
-        galleryLauncher.launch("image/*")
-    }
-)
+                    /*
+                     * IMPORTANT DRAWING BOUNDARY
+                     *
+                     * DrawingCanvas is isolated inside this Box.
+                     *
+                     * It cannot draw outside this area.
+                     *
+                     * Therefore:
+                     *
+                     * - Title is protected
+                     * - Top metadata/menu is protected
+                     * - Bottom note field is protected
+                     * - Eraser cannot visually extend outside canvas area
+                     */
+
+                    Box(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(
+                                    horizontal = 8.dp,
+                                    vertical = 4.dp
+                                )
+                                .clip(
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clipToBounds()
+                    ) {
+
+                        DrawingCanvas(
+
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .clipToBounds(),
+
+                            initialData =
+                                sketchData,
+
+                            onDataChanged = {
+                                sketchData = it
+                            }
+                        )
+                    }
 
                     /*
-                     * -------------------------------------------------
-                     * SKETCH DESCRIPTION
-                     * -------------------------------------------------
+                     * ----------------------------------------------------------------
+                     * BOTTOM NOTE / DESCRIPTION AREA
+                     * ----------------------------------------------------------------
+                     *
+                     * This is outside DrawingCanvas.
                      */
 
                     TextField(
@@ -918,14 +916,19 @@ fun NoteEditorScreen(
                             Text(
                                 "Çizim hakkında not...",
                                 style =
-                                    MaterialTheme.typography.bodyMedium
+                                    MaterialTheme
+                                        .typography
+                                        .bodyMedium
                             )
                         },
 
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(
+                                    horizontal = 16.dp,
+                                    vertical = 8.dp
+                                ),
 
                         colors =
                             TextFieldDefaults.colors(
@@ -934,19 +937,29 @@ fun NoteEditorScreen(
                                     Color.Transparent,
 
                                 unfocusedContainerColor =
+                                    Color.Transparent,
+
+                                focusedIndicatorColor =
+                                    Color.Transparent,
+
+                                unfocusedIndicatorColor =
                                     Color.Transparent
                             )
                     )
 
                 } else if (
-                    note?.type == NoteType.CHECKLIST ||
+
+                    note?.type ==
+                        NoteType.CHECKLIST ||
+
                     checklistItems.isNotEmpty()
+
                 ) {
 
                     /*
-                     * =================================================
+                     * ----------------------------------------------------------------
                      * CHECKLIST
-                     * =================================================
+                     * ----------------------------------------------------------------
                      */
 
                     ChecklistEditor(
@@ -962,15 +975,9 @@ fun NoteEditorScreen(
                 } else {
 
                     /*
-                     * =================================================
-                     * NORMAL NOTE
-                     * =================================================
-                     */
-
-                    /*
-                     * -------------------------------------------------
-                     * IMAGES
-                     * -------------------------------------------------
+                     * ----------------------------------------------------------------
+                     * IMAGE AREA
+                     * ----------------------------------------------------------------
                      */
 
                     if (imageUris.isNotEmpty()) {
@@ -978,10 +985,14 @@ fun NoteEditorScreen(
                         LazyRow(
 
                             modifier =
-                                Modifier.padding(16.dp),
+                                Modifier.padding(
+                                    16.dp
+                                ),
 
                             horizontalArrangement =
-                                Arrangement.spacedBy(8.dp)
+                                Arrangement.spacedBy(
+                                    8.dp
+                                )
                         ) {
 
                             items(imageUris) { uri ->
@@ -1007,10 +1018,6 @@ fun NoteEditorScreen(
                                         contentScale =
                                             ContentScale.Crop
                                     )
-
-                                    /*
-                                     * DELETE IMAGE
-                                     */
 
                                     IconButton(
 
@@ -1045,7 +1052,9 @@ fun NoteEditorScreen(
                                                 Color.White,
 
                                             modifier =
-                                                Modifier.size(16.dp)
+                                                Modifier.size(
+                                                    16.dp
+                                                )
                                         )
                                     }
                                 }
@@ -1054,9 +1063,9 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * -------------------------------------------------
-                     * NORMAL TEXT
-                     * -------------------------------------------------
+                     * ----------------------------------------------------------------
+                     * NORMAL TEXT AREA
+                     * ----------------------------------------------------------------
                      */
 
                     TextField(
@@ -1072,7 +1081,9 @@ fun NoteEditorScreen(
                             Text(
                                 "Notunuzu yazın...",
                                 style =
-                                    MaterialTheme.typography.bodyLarge
+                                    MaterialTheme
+                                        .typography
+                                        .bodyLarge
                             )
                         },
 
@@ -1099,16 +1110,18 @@ fun NoteEditorScreen(
                             ),
 
                         textStyle =
-                            MaterialTheme.typography.bodyLarge
+                            MaterialTheme
+                                .typography
+                                .bodyLarge
                     )
                 }
 
             } else {
 
                 /*
-                 * =====================================================
+                 * --------------------------------------------------------------------
                  * PREVIEW MODE
-                 * =====================================================
+                 * --------------------------------------------------------------------
                  */
 
                 Column(
@@ -1122,11 +1135,8 @@ fun NoteEditorScreen(
                             .padding(16.dp)
                 ) {
 
-                    /*
-                     * DISPLAY TITLE
-                     */
-
                     val displayTitle =
+
                         if (
                             title.isEmpty() &&
                             checklistItems.isNotEmpty()
@@ -1137,9 +1147,7 @@ fun NoteEditorScreen(
                                 ?.text
                                 ?: "Başlıksız Not"
 
-                        } else if (
-                            title.isEmpty()
-                        ) {
+                        } else if (title.isEmpty()) {
 
                             "Başlıksız Not"
 
@@ -1153,7 +1161,9 @@ fun NoteEditorScreen(
                         displayTitle,
 
                         style =
-                            MaterialTheme.typography.headlineSmall,
+                            MaterialTheme
+                                .typography
+                                .headlineSmall,
 
                         fontWeight =
                             FontWeight.Bold
@@ -1165,7 +1175,7 @@ fun NoteEditorScreen(
                     )
 
                     /*
-                     * CHECKLIST PREVIEW
+                     * Checklist preview
                      */
 
                     if (checklistItems.isNotEmpty()) {
@@ -1186,8 +1196,7 @@ fun NoteEditorScreen(
                                     onCheckedChange =
                                         null,
 
-                                    enabled =
-                                        false
+                                    enabled = false
                                 )
 
                                 Text(
@@ -1195,6 +1204,7 @@ fun NoteEditorScreen(
                                     item.text,
 
                                     style =
+
                                         if (item.isChecked) {
 
                                             MaterialTheme
@@ -1202,12 +1212,7 @@ fun NoteEditorScreen(
                                                 .bodyLarge
                                                 .copy(
                                                     textDecoration =
-                                                        androidx
-                                                            .compose
-                                                            .ui
-                                                            .text
-                                                            .style
-                                                            .TextDecoration
+                                                        TextDecoration
                                                             .LineThrough
                                                 )
 
@@ -1223,21 +1228,19 @@ fun NoteEditorScreen(
 
                     } else {
 
-                        /*
-                         * NORMAL TEXT PREVIEW
-                         */
-
                         Text(
 
                             content,
 
                             style =
-                                MaterialTheme.typography.bodyLarge
+                                MaterialTheme
+                                    .typography
+                                    .bodyLarge
                         )
                     }
 
                     /*
-                     * SKETCH INFORMATION
+                     * Sketch information
                      */
 
                     if (
@@ -1251,10 +1254,13 @@ fun NoteEditorScreen(
 
                         Text(
 
-                            "Çizim içeriyor. Düzenlemek için Sketch moduna geçin.",
+                            "Çizim İçeriyor " +
+                                "(Düzenlemek için Sketch moduna geçin)",
 
                             style =
-                                MaterialTheme.typography.labelSmall,
+                                MaterialTheme
+                                    .typography
+                                    .labelSmall,
 
                             color =
                                 Color.Gray
@@ -1262,7 +1268,7 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * NORMAL NOTE IMAGES
+                     * Images
                      */
 
                     imageUris.forEach { uri ->
@@ -1296,9 +1302,9 @@ fun NoteEditorScreen(
     }
 
     /*
-     * ============================================================
-     * DELETE NOTE DIALOG
-     * ============================================================
+     * ------------------------------------------------------------------------
+     * DELETE DIALOG
+     * ------------------------------------------------------------------------
      */
 
     if (
@@ -1309,18 +1315,14 @@ fun NoteEditorScreen(
         AlertDialog(
 
             onDismissRequest = {
-
-                showDeleteDialog =
-                    false
+                showDeleteDialog = false
             },
 
             title = {
-
                 Text("Notu Sil")
             },
 
             text = {
-
                 Text(
                     "Bu notu silmek istediğinize emin misiniz?"
                 )
@@ -1336,13 +1338,18 @@ fun NoteEditorScreen(
 
                         showDeleteDialog =
                             false
+
+                        onBack()
                     }
+
                 ) {
 
                     Text(
                         "Sil",
                         color =
-                            MaterialTheme.colorScheme.error
+                            MaterialTheme
+                                .colorScheme
+                                .error
                     )
                 }
             },
@@ -1352,10 +1359,9 @@ fun NoteEditorScreen(
                 TextButton(
 
                     onClick = {
-
-                        showDeleteDialog =
-                            false
+                        showDeleteDialog = false
                     }
+
                 ) {
 
                     Text("Vazgeç")
