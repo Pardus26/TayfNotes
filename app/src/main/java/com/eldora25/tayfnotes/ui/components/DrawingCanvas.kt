@@ -1,11 +1,15 @@
 package com.eldora25.tayfnotes.ui.components
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,40 +18,59 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.eldora25.tayfnotes.ui.theme.NeonIcon
+import coil.compose.AsyncImage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
-import kotlin.math.sqrt
+import kotlin.math.max
+import kotlin.math.min
 
-/* ============================================================
- * DRAWING DATA
- * ============================================================ */
-
-@Serializable
-data class DrawPath(
-    val points: List<Point>,
-    val colorHex: String,
-    val strokeWidth: Float,
-    val toolType: ToolType = ToolType.PEN,
-    val shapeType: ShapeType? = null,
-    val isFilled: Boolean = false,
-    val fillColorHex: String? = null,
-    val opacity: Float = 1f
-)
-
+/**
+ * TayfNotes çizim araçları.
+ *
+ * PEN:
+ * Normal tükenmez/kalem
+ *
+ * PENCIL:
+ * Kurşun kalem
+ *
+ * INK:
+ * Mürekkep kalem
+ *
+ * BRUSH:
+ * Fırça
+ *
+ * MARKER:
+ * Fosforlu/marker
+ *
+ * ERASER:
+ * Silgi
+ *
+ * SHAPE:
+ * Şekiller
+ *
+ * PEN değeri eski sürümlerle uyumluluk için korunmuştur.
+ */
 enum class ToolType {
     PEN,
-    BALLPOINT,
     PENCIL,
-    MARKER,
+    INK,
     BRUSH,
+    MARKER,
     ERASER,
     SHAPE
 }
@@ -66,621 +89,887 @@ data class Point(
     val y: Float
 )
 
-/* ============================================================
- * TOOL CONFIGURATION
- * ============================================================ */
-
-private data class ToolConfig(
-    val name: String,
-    val defaultSize: Float,
-    val defaultOpacity: Float,
-    val minSize: Float = 1f,
-    val maxSize: Float = 80f
+/**
+ * Çizilmiş tek bir stroke.
+ *
+ * opacity alanı yeni sürümde eklenmiştir.
+ * Default değer 1f olduğu için eski kayıtlarla uyumludur.
+ */
+@Serializable
+data class DrawPath(
+    val points: List<Point>,
+    val colorHex: String,
+    val strokeWidth: Float,
+    val toolType: ToolType = ToolType.PEN,
+    val shapeType: ShapeType? = null,
+    val isFilled: Boolean = false,
+    val fillColorHex: String? = null,
+    val opacity: Float = 1f
 )
 
-private fun toolConfig(tool: ToolType): ToolConfig {
+/**
+ * Sketch içine eklenen resim.
+ */
+@Serializable
+data class SketchImage(
+    val id: String,
+    val uri: String,
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float
+)
+
+/**
+ * Yeni sketch veri formatı.
+ *
+ * Eski sürüm:
+ * List<DrawPath>
+ *
+ * Yeni sürüm:
+ * SketchDocument
+ *
+ * DrawingCanvas eski formatı da okuyabilir.
+ */
+@Serializable
+data class SketchDocument(
+    val paths: List<DrawPath> = emptyList(),
+    val images: List<SketchImage> = emptyList()
+)
+
+/**
+ * Her aracın kendi ayarları vardır.
+ *
+ * Önemli:
+ * Opacity artık ayrı bir araç DEĞİLDİR.
+ * Her kalem/fırça/marker kendi opacity değerine sahiptir.
+ */
+data class ToolSettings(
+    val size: Float,
+    val opacity: Float
+)
+
+private fun defaultToolSettings(): Map<ToolType, ToolSettings> {
+    return mapOf(
+        ToolType.PEN to ToolSettings(4f, 1f),
+        ToolType.PENCIL to ToolSettings(3f, 0.75f),
+        ToolType.INK to ToolSettings(5f, 1f),
+        ToolType.BRUSH to ToolSettings(12f, 0.70f),
+        ToolType.MARKER to ToolSettings(20f, 0.45f),
+        ToolType.ERASER to ToolSettings(30f, 1f),
+        ToolType.SHAPE to ToolSettings(4f, 1f)
+    )
+}
+
+private fun toolDisplayName(tool: ToolType): String {
     return when (tool) {
-        ToolType.PEN -> ToolConfig(
-            name = "Kalem",
-            defaultSize = 3f,
-            defaultOpacity = 1f,
-            maxSize = 30f
-        )
-
-        ToolType.BALLPOINT -> ToolConfig(
-            name = "Mürekkepli Kalem",
-            defaultSize = 2.5f,
-            defaultOpacity = 0.92f,
-            maxSize = 25f
-        )
-
-        ToolType.PENCIL -> ToolConfig(
-            name = "Kurşun Kalem",
-            defaultSize = 4f,
-            defaultOpacity = 0.65f,
-            maxSize = 35f
-        )
-
-        ToolType.MARKER -> ToolConfig(
-            name = "Marker",
-            defaultSize = 14f,
-            defaultOpacity = 0.38f,
-            maxSize = 60f
-        )
-
-        ToolType.BRUSH -> ToolConfig(
-            name = "Fırça",
-            defaultSize = 8f,
-            defaultOpacity = 0.78f,
-            maxSize = 80f
-        )
-
-        ToolType.ERASER -> ToolConfig(
-            name = "Silgi",
-            defaultSize = 24f,
-            defaultOpacity = 1f,
-            maxSize = 100f
-        )
-
-        ToolType.SHAPE -> ToolConfig(
-            name = "Şekil",
-            defaultSize = 4f,
-            defaultOpacity = 1f,
-            maxSize = 30f
-        )
+        ToolType.PEN -> "Kalem"
+        ToolType.PENCIL -> "Kurşun Kalem"
+        ToolType.INK -> "Mürekkep"
+        ToolType.BRUSH -> "Fırça"
+        ToolType.MARKER -> "Marker"
+        ToolType.ERASER -> "Silgi"
+        ToolType.SHAPE -> "Şekil"
     }
 }
 
-/* ============================================================
- * MAIN CANVAS
- * ============================================================ */
+private fun toolSizeRange(tool: ToolType): ClosedFloatingPointRange<Float> {
+    return when (tool) {
+        ToolType.ERASER -> 5f..100f
+        ToolType.MARKER -> 2f..60f
+        ToolType.BRUSH -> 2f..60f
+        else -> 1f..40f
+    }
+}
 
-@OptIn(ExperimentalLayoutApi::class)
+private fun Color.toHex(): String {
+    return String.format(
+        "#%06X",
+        0xFFFFFF and this.toArgb()
+    )
+}
+
 @Composable
 fun DrawingCanvas(
     modifier: Modifier = Modifier,
     initialData: String? = null,
-    onDataChanged: (String) -> Unit,
-    onAddImage: (() -> Unit)? = null
+    onDataChanged: (String) -> Unit
 ) {
+    /**
+     * ---------------------------------------------------------
+     * INITIAL DATA
+     * ---------------------------------------------------------
+     */
 
-    var paths by remember {
+    fun decodeInitialData(data: String?): SketchDocument {
+        if (data.isNullOrBlank()) {
+            return SketchDocument()
+        }
+
+        // Önce yeni formatı deniyoruz.
+        try {
+            return Json.decodeFromString<SketchDocument>(data)
+        } catch (_: Exception) {
+        }
+
+        // Daha sonra eski formatı deniyoruz.
+        try {
+            val oldPaths =
+                Json.decodeFromString<List<DrawPath>>(data)
+
+            return SketchDocument(
+                paths = oldPaths
+            )
+        } catch (_: Exception) {
+        }
+
+        return SketchDocument()
+    }
+
+    var document by remember {
         mutableStateOf(
-            if (!initialData.isNullOrEmpty()) {
-                try {
-                    Json.decodeFromString<List<DrawPath>>(initialData)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            } else {
-                emptyList()
-            }
+            decodeInitialData(initialData)
         )
     }
 
-    val currentPathPoints = remember {
-        mutableStateListOf<Point>()
+    /**
+     * Undo / Redo
+     */
+    var undoStack by remember {
+        mutableStateOf<List<SketchDocument>>(emptyList())
     }
 
+    var redoStack by remember {
+        mutableStateOf<List<SketchDocument>>(emptyList())
+    }
+
+    /**
+     * Aktif araç
+     */
     var currentTool by remember {
         mutableStateOf(ToolType.PEN)
     }
 
+    /**
+     * Aktif şekil
+     */
     var currentShape by remember {
         mutableStateOf(ShapeType.RECTANGLE)
     }
 
+    /**
+     * Her aracın kendi ayarı.
+     */
+    var toolSettings by remember {
+        mutableStateOf(defaultToolSettings())
+    }
+
+    /**
+     * Aktif renk
+     */
     var currentColor by remember {
         mutableStateOf(Color.Black)
+    }
+
+    /**
+     * Dolgu
+     */
+    var isFillEnabled by remember {
+        mutableStateOf(false)
     }
 
     var currentFillColor by remember {
         mutableStateOf(Color.Transparent)
     }
 
-    var isFillEnabled by remember {
-        mutableStateOf(false)
-    }
-
-    /*
-     * Her araç kendi boyut ve opaklık değerini saklar.
+    /**
+     * İkinci dokunuşla açılan menü.
+     *
+     * null = hiçbir menü açık değil
      */
-    val toolSizes = remember {
-        mutableStateMapOf<ToolType, Float>().apply {
-            ToolType.values().forEach {
-                this[it] = toolConfig(it).defaultSize
-            }
-        }
-    }
-
-    val toolOpacities = remember {
-        mutableStateMapOf<ToolType, Float>().apply {
-            ToolType.values().forEach {
-                this[it] = toolConfig(it).defaultOpacity
-            }
-        }
-    }
-
-    var settingsTool by remember {
+    var expandedTool by remember {
         mutableStateOf<ToolType?>(null)
     }
 
-    var showColorPicker by remember {
+    var colorMenuExpanded by remember {
         mutableStateOf(false)
     }
 
-    var showShapePicker by remember {
-        mutableStateOf(false)
-    }
-
-    /*
-     * Undo / Redo
+    /**
+     * Çizim sırasında kullanılan noktalar.
      */
-    val undoStack = remember {
-        mutableStateListOf<List<DrawPath>>()
+    val currentPathPoints = remember {
+        mutableStateListOf<Point>()
     }
 
-    val redoStack = remember {
-        mutableStateListOf<List<DrawPath>>()
-    }
-
-    /*
-     * Silme işleminden önceki durum.
+    /**
+     * Canvas gerçek boyutu.
+     *
+     * Resim eklerken resmi çizim alanının ortasına
+     * yerleştirmek için kullanıyoruz.
      */
-    var eraseStartSnapshot by remember {
-        mutableStateOf<List<DrawPath>?>(null)
+    var canvasSize by remember {
+        mutableStateOf(IntSize.Zero)
     }
 
-    fun serialize(data: List<DrawPath>) {
-        onDataChanged(Json.encodeToString(data))
-    }
+    /**
+     * Resim seçici.
+     */
+    val imagePicker =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
 
-    fun commit(newPaths: List<DrawPath>) {
-        undoStack.add(paths)
+            uri ?: return@rememberLauncherForActivityResult
 
-        /*
-         * Çok büyük history oluşmasını engelle.
-         */
-        if (undoStack.size > 50) {
-            undoStack.removeAt(0)
+            if (canvasSize.width <= 0 || canvasSize.height <= 0) {
+                return@rememberLauncherForActivityResult
+            }
+
+            val imageWidth =
+                (canvasSize.width * 0.45f)
+                    .coerceIn(240f, 650f)
+
+            val imageHeight =
+                imageWidth * 0.65f
+
+            val imageX =
+                (canvasSize.width - imageWidth) / 2f
+
+            val imageY =
+                (canvasSize.height - imageHeight) / 2f
+
+            val newImage = SketchImage(
+                id = System.currentTimeMillis().toString(),
+                uri = uri.toString(),
+                x = imageX,
+                y = imageY,
+                width = imageWidth,
+                height = imageHeight
+            )
+
+            undoStack =
+                undoStack + document
+
+            redoStack = emptyList()
+
+            document =
+                document.copy(
+                    images = document.images + newImage
+                )
+
+            onDataChanged(
+                Json.encodeToString(document)
+            )
         }
 
-        paths = newPaths
-        redoStack.clear()
-        serialize(paths)
+    /**
+     * ---------------------------------------------------------
+     * HELPERS
+     * ---------------------------------------------------------
+     */
+
+    fun saveCurrentState() {
+        onDataChanged(
+            Json.encodeToString(document)
+        )
     }
 
-    fun undo() {
-        if (undoStack.isNotEmpty()) {
-            val previous = undoStack.removeAt(undoStack.lastIndex)
-
-            redoStack.add(paths)
-
-            paths = previous
-            currentPathPoints.clear()
-
-            serialize(paths)
-        }
-    }
-
-    fun redo() {
-        if (redoStack.isNotEmpty()) {
-            val next = redoStack.removeAt(redoStack.lastIndex)
-
-            undoStack.add(paths)
-
-            paths = next
-            currentPathPoints.clear()
-
-            serialize(paths)
-        }
-    }
-
-    fun clearPage() {
-        if (paths.isNotEmpty()) {
-            commit(emptyList())
-        }
+    fun updateToolSettings(
+        tool: ToolType,
+        newSettings: ToolSettings
+    ) {
+        toolSettings =
+            toolSettings.toMutableMap().apply {
+                this[tool] = newSettings
+            }
     }
 
     fun selectTool(tool: ToolType) {
-
-        /*
-         * Birinci basış:
-         * aracı seç.
+        /**
+         * İlk dokunuş:
+         * sadece aracı seç.
          *
-         * İkinci basış:
-         * aynı aracın ayar panelini aç/kapat.
+         * Aynı seçili araca tekrar dokunulursa:
+         * ayar menüsünü aç.
          */
         if (currentTool == tool) {
-            settingsTool =
-                if (settingsTool == tool) null else tool
+            expandedTool =
+                if (expandedTool == tool) {
+                    null
+                } else {
+                    tool
+                }
         } else {
             currentTool = tool
-            settingsTool = null
-        }
-
-        if (tool == ToolType.SHAPE) {
-            showShapePicker = false
+            expandedTool = null
         }
     }
+
+    fun performUndo() {
+        if (undoStack.isEmpty()) return
+
+        val previous = undoStack.last()
+
+        redoStack =
+            redoStack + document
+
+        undoStack =
+            undoStack.dropLast(1)
+
+        document = previous
+
+        currentPathPoints.clear()
+
+        saveCurrentState()
+    }
+
+    fun performRedo() {
+        if (redoStack.isEmpty()) return
+
+        val next = redoStack.last()
+
+        undoStack =
+            undoStack + document
+
+        redoStack =
+            redoStack.dropLast(1)
+
+        document = next
+
+        currentPathPoints.clear()
+
+        saveCurrentState()
+    }
+
+    fun clearCanvas() {
+        if (
+            document.paths.isEmpty() &&
+            document.images.isEmpty()
+        ) {
+            return
+        }
+
+        undoStack =
+            undoStack + document
+
+        redoStack = emptyList()
+
+        document = SketchDocument()
+
+        currentPathPoints.clear()
+
+        saveCurrentState()
+    }
+
+    /**
+     * ---------------------------------------------------------
+     * TOOLBAR
+     * ---------------------------------------------------------
+     */
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            /**
+             * KRİTİK:
+             *
+             * DrawingCanvas'ın dışına taşan çizimler
+             * kesinlikle görünmeyecek.
+             */
+            .clipToBounds()
             .background(Color.White)
     ) {
 
-        /* ====================================================
-         * TOOLBAR
-         * ==================================================== */
-
+        /**
+         * -----------------------------------------------------
+         * ÜST ARAÇ ÇUBUĞU
+         * -----------------------------------------------------
+         */
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            shape = RoundedCornerShape(14.dp),
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(
                 alpha = 0.95f
             ),
-            tonalElevation = 5.dp
+            tonalElevation = 4.dp
         ) {
 
-            Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(
+                        rememberScrollState()
+                    )
+                    .padding(
+                        horizontal = 10.dp,
+                        vertical = 4.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                /**
+                 * UNDO
+                 */
+                IconButton(
+                    enabled = undoStack.isNotEmpty(),
+                    onClick = {
+                        performUndo()
+                    }
                 ) {
+                    Icon(
+                        Icons.Default.Undo,
+                        contentDescription = "Geri Al",
+                        tint =
+                            if (undoStack.isNotEmpty())
+                                LocalContentColor.current
+                            else
+                                Color.Gray
+                    )
+                }
 
-                    /* UNDO */
+                /**
+                 * REDO
+                 */
+                IconButton(
+                    enabled = redoStack.isNotEmpty(),
+                    onClick = {
+                        performRedo()
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.Redo,
+                        contentDescription = "İleri Al",
+                        tint =
+                            if (redoStack.isNotEmpty())
+                                LocalContentColor.current
+                            else
+                                Color.Gray
+                    )
+                }
 
-                    IconButton(
-                        enabled = undoStack.isNotEmpty(),
-                        onClick = { undo() }
-                    ) {
-                        Icon(
-                            Icons.Default.Undo,
-                            contentDescription = "Geri Al"
+                /**
+                 * -------------------------------------------------
+                 * KURŞUN KALEM
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.PENCIL,
+                    icon = Icons.Default.Create,
+                    selected = currentTool == ToolType.PENCIL,
+                    expanded = expandedTool == ToolType.PENCIL,
+                    onClick = {
+                        selectTool(ToolType.PENCIL)
+                    },
+                    settings = toolSettings[ToolType.PENCIL]
+                        ?: ToolSettings(3f, 0.75f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.PENCIL,
+                            it
                         )
                     }
+                )
 
-                    /* REDO */
-
-                    IconButton(
-                        enabled = redoStack.isNotEmpty(),
-                        onClick = { redo() }
-                    ) {
-                        Icon(
-                            Icons.Default.Redo,
-                            contentDescription = "Yinele"
+                /**
+                 * -------------------------------------------------
+                 * KALEM
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.PEN,
+                    icon = Icons.Default.Edit,
+                    selected = currentTool == ToolType.PEN,
+                    expanded = expandedTool == ToolType.PEN,
+                    onClick = {
+                        selectTool(ToolType.PEN)
+                    },
+                    settings = toolSettings[ToolType.PEN]
+                        ?: ToolSettings(4f, 1f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.PEN,
+                            it
                         )
                     }
+                )
 
-                    /* KALEM */
+                /**
+                 * -------------------------------------------------
+                 * MÜREKKEP
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.INK,
+                    icon = Icons.Default.Colorize,
+                    selected = currentTool == ToolType.INK,
+                    expanded = expandedTool == ToolType.INK,
+                    onClick = {
+                        selectTool(ToolType.INK)
+                    },
+                    settings = toolSettings[ToolType.INK]
+                        ?: ToolSettings(5f, 1f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.INK,
+                            it
+                        )
+                    }
+                )
 
-                    ToolButton(
-                        icon = Icons.Default.Create,
-                        label = "Kalem",
-                        selected = currentTool == ToolType.PEN,
+                /**
+                 * -------------------------------------------------
+                 * FIRÇA
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.BRUSH,
+                    icon = Icons.Default.Brush,
+                    selected = currentTool == ToolType.BRUSH,
+                    expanded = expandedTool == ToolType.BRUSH,
+                    onClick = {
+                        selectTool(ToolType.BRUSH)
+                    },
+                    settings = toolSettings[ToolType.BRUSH]
+                        ?: ToolSettings(12f, 0.70f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.BRUSH,
+                            it
+                        )
+                    }
+                )
+
+                /**
+                 * -------------------------------------------------
+                 * MARKER
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.MARKER,
+                    icon = Icons.Default.Brush,
+                    selected = currentTool == ToolType.MARKER,
+                    expanded = expandedTool == ToolType.MARKER,
+                    onClick = {
+                        selectTool(ToolType.MARKER)
+                    },
+                    settings = toolSettings[ToolType.MARKER]
+                        ?: ToolSettings(20f, 0.45f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.MARKER,
+                            it
+                        )
+                    }
+                )
+
+                /**
+                 * -------------------------------------------------
+                 * ŞEKİLLER
+                 * -------------------------------------------------
+                 */
+                Box {
+                    IconButton(
                         onClick = {
-                            selectTool(ToolType.PEN)
-                        }
-                    )
-
-                    /* MÜREKKEPLİ KALEM */
-
-                    ToolButton(
-                        icon = Icons.Default.Edit,
-                        label = "Mürekkep",
-                        selected = currentTool == ToolType.BALLPOINT,
-                        onClick = {
-                            selectTool(ToolType.BALLPOINT)
-                        }
-                    )
-
-                    /* KURŞUN KALEM */
-
-                    ToolButton(
-                        icon = Icons.Default.Brush,
-                        label = "Kurşun",
-                        selected = currentTool == ToolType.PENCIL,
-                        onClick = {
-                            selectTool(ToolType.PENCIL)
-                        }
-                    )
-
-                    /* MARKER */
-
-                    ToolButton(
-                        icon = Icons.Default.BorderColor,
-                        label = "Marker",
-                        selected = currentTool == ToolType.MARKER,
-                        onClick = {
-                            selectTool(ToolType.MARKER)
-                        }
-                    )
-
-                    /* FIRÇA */
-
-                    ToolButton(
-                        icon = Icons.Default.Brush,
-                        label = "Fırça",
-                        selected = currentTool == ToolType.BRUSH,
-                        onClick = {
-                            selectTool(ToolType.BRUSH)
-                        }
-                    )
-
-                    /* SİLGİ */
-
-                    ToolButton(
-                        icon = Icons.Default.AutoFixNormal,
-                        label = "Silgi",
-                        selected = currentTool == ToolType.ERASER,
-                        onClick = {
-                            selectTool(ToolType.ERASER)
-                        }
-                    )
-
-                    /* ŞEKİL */
-
-                    ToolButton(
-                        icon = Icons.Default.Category,
-                        label = "Şekil",
-                        selected = currentTool == ToolType.SHAPE,
-                        onClick = {
-                            selectTool(ToolType.SHAPE)
-
                             if (currentTool == ToolType.SHAPE) {
-                                showShapePicker = true
-                            }
-                        }
-                    )
-
-                    /* RENK */
-
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clickable {
-                                showColorPicker = !showColorPicker
-                                settingsTool = null
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        NeonIcon(
-                            backgroundColor = currentColor,
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Palette,
-                                contentDescription = "Renk",
-                                tint =
-                                    if (currentColor.luminance() > 0.5f)
-                                        Color.Black
+                                expandedTool =
+                                    if (expandedTool == ToolType.SHAPE)
+                                        null
                                     else
-                                        Color.White
-                            )
-                        }
-                    }
-
-                    /* RESİM */
-
-                    if (onAddImage != null) {
-                        IconButton(
-                            onClick = {
-                                onAddImage()
+                                        ToolType.SHAPE
+                            } else {
+                                currentTool = ToolType.SHAPE
+                                expandedTool = null
                             }
-                        ) {
-                            Icon(
-                                Icons.Default.Image,
-                                contentDescription = "Resim Ekle"
-                            )
-                        }
-                    }
-
-                    /* SAYFAYI TEMİZLE */
-
-                    IconButton(
-                        onClick = {
-                            clearPage()
                         }
                     ) {
                         Icon(
-                            Icons.Default.DeleteSweep,
-                            contentDescription = "Sayfayı Temizle"
+                            Icons.Default.Category,
+                            contentDescription = "Şekiller",
+                            tint =
+                                if (currentTool == ToolType.SHAPE)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    LocalContentColor.current
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded =
+                            expandedTool == ToolType.SHAPE,
+                        onDismissRequest = {
+                            expandedTool = null
+                        }
+                    ) {
+
+                        DropdownMenuItem(
+                            text = { Text("Dikdörtgen") },
+                            onClick = {
+                                currentShape =
+                                    ShapeType.RECTANGLE
+                                currentTool =
+                                    ToolType.SHAPE
+                                expandedTool = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Rectangle,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Daire") },
+                            onClick = {
+                                currentShape =
+                                    ShapeType.CIRCLE
+                                currentTool =
+                                    ToolType.SHAPE
+                                expandedTool = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Circle,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Üçgen") },
+                            onClick = {
+                                currentShape =
+                                    ShapeType.TRIANGLE
+                                currentTool =
+                                    ToolType.SHAPE
+                                expandedTool = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.ChangeHistory,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Elips") },
+                            onClick = {
+                                currentShape =
+                                    ShapeType.ELLIPSE
+                                currentTool =
+                                    ToolType.SHAPE
+                                expandedTool = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.FilterTiltShift,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Yay") },
+                            onClick = {
+                                currentShape =
+                                    ShapeType.ARC
+                                currentTool =
+                                    ToolType.SHAPE
+                                expandedTool = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Architecture,
+                                    contentDescription = null
+                                )
+                            }
                         )
                     }
                 }
 
-                /* =================================================
-                 * TOOL SETTINGS
-                 * ================================================= */
+                /**
+                 * -------------------------------------------------
+                 * RENK
+                 * -------------------------------------------------
+                 */
+                Box {
 
-                if (settingsTool != null) {
-
-                    val tool = settingsTool!!
-                    val config = toolConfig(tool)
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                start = 14.dp,
-                                end = 14.dp,
-                                bottom = 10.dp
-                            )
-                            .background(
-                                MaterialTheme.colorScheme.surface.copy(
-                                    alpha = 0.92f
-                                ),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outline.copy(
-                                    alpha = 0.25f
-                                ),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(12.dp)
+                    IconButton(
+                        onClick = {
+                            colorMenuExpanded =
+                                !colorMenuExpanded
+                        }
                     ) {
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Text(
-                                config.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Text(
-                                "${toolSizes[tool]!!.toInt()} px",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .background(
-                                        if (tool == ToolType.ERASER)
-                                            Color.LightGray
-                                        else
-                                            currentColor,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                            )
-
-                            Slider(
-                                value = toolSizes[tool] ?: config.defaultSize,
-                                onValueChange = {
-                                    toolSizes[tool] = it
-                                },
-                                valueRange =
-                                    config.minSize..config.maxSize,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(
-                            modifier = Modifier.height(4.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    currentColor,
+                                    CircleShape
+                                )
+                                .border(
+                                    2.dp,
+                                    Color.Black,
+                                    CircleShape
+                                )
                         )
-
-                        /* OPACITY */
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Text(
-                                "Opaklık",
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.width(70.dp)
-                            )
-
-                            Slider(
-                                value =
-                                    toolOpacities[tool]
-                                        ?: config.defaultOpacity,
-                                onValueChange = {
-                                    toolOpacities[tool] = it
-                                },
-                                valueRange = 0.05f..1f,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Text(
-                                "${((toolOpacities[tool] ?: 1f) * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(45.dp)
-                            )
-                        }
-
-                        /* QUICK SIZES */
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement =
-                                Arrangement.SpaceEvenly
-                        ) {
-
-                            listOf(
-                                2f,
-                                5f,
-                                10f,
-                                20f,
-                                40f
-                            ).forEach { size ->
-
-                                OutlinedButton(
-                                    onClick = {
-                                        toolSizes[tool] =
-                                            size.coerceIn(
-                                                config.minSize,
-                                                config.maxSize
-                                            )
-                                    }
-                                ) {
-                                    Text(
-                                        size.toInt().toString()
-                                    )
-                                }
-                            }
-                        }
                     }
+
+                    ColorPalettePopup(
+                        expanded = colorMenuExpanded,
+                        currentColor = currentColor,
+                        onColorSelected = {
+                            currentColor = it
+                            colorMenuExpanded = false
+                        },
+                        onDismiss = {
+                            colorMenuExpanded = false
+                        }
+                    )
+                }
+
+                /**
+                 * -------------------------------------------------
+                 * RESİM EKLE
+                 * -------------------------------------------------
+                 */
+                IconButton(
+                    onClick = {
+                        imagePicker.launch("image/*")
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = "Sayfaya resim ekle"
+                    )
+                }
+
+                /**
+                 * -------------------------------------------------
+                 * SİLGİ
+                 * -------------------------------------------------
+                 */
+                ToolButton(
+                    tool = ToolType.ERASER,
+                    icon = Icons.Default.AutoFixNormal,
+                    selected = currentTool == ToolType.ERASER,
+                    expanded = expandedTool == ToolType.ERASER,
+                    onClick = {
+                        selectTool(ToolType.ERASER)
+                    },
+                    settings = toolSettings[ToolType.ERASER]
+                        ?: ToolSettings(30f, 1f),
+                    onSettingsChanged = {
+                        updateToolSettings(
+                            ToolType.ERASER,
+                            it
+                        )
+                    },
+                    showOpacity = false
+                )
+
+                /**
+                 * -------------------------------------------------
+                 * TEMİZLE
+                 * -------------------------------------------------
+                 */
+                IconButton(
+                    onClick = {
+                        clearCanvas()
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.DeleteSweep,
+                        contentDescription = "Sayfayı tamamen temizle"
+                    )
                 }
             }
         }
 
-        /* ====================================================
-         * CANVAS
-         * ==================================================== */
-
-        Canvas(
+        /**
+         * ---------------------------------------------------------
+         * GERÇEK ÇİZİM ALANI
+         * ---------------------------------------------------------
+         *
+         * Çok önemli:
+         *
+         * Toolbar yukarıda.
+         *
+         * Canvas burada başlıyor.
+         *
+         * Altındaki NoteEditor TextField'a da taşamaz.
+         *
+         * clipToBounds sayesinde Canvas dışına çizim çıkamaz.
+         */
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .pointerInput(
-                    currentTool,
-                    currentColor,
-                    currentShape,
-                    settingsTool,
-                    toolSizes,
-                    toolOpacities
-                ) {
+                .clipToBounds()
+                .background(Color.White)
+                .padding(4.dp)
+                .onSizeChanged {
+                    canvasSize = it
+                }
+        ) {
 
-                    detectDragGestures(
+            /**
+             * -----------------------------------------------------
+             * RESİMLER
+             * -----------------------------------------------------
+             */
+            document.images.forEach { image ->
 
-                        onDragStart = { offset ->
+                val density =
+                    androidx.compose.ui.platform.LocalDensity.current
 
-                            if (currentTool == ToolType.ERASER) {
+                AsyncImage(
+                    model = image.uri,
+                    contentDescription = "Sketch resmi",
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                image.x.toInt(),
+                                image.y.toInt()
+                            )
+                        }
+                        .size(
+                            with(density) {
+                                image.width.toDp()
+                            },
+                            with(density) {
+                                image.height.toDp()
+                            }
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
-                                eraseStartSnapshot = paths
+            /**
+             * -----------------------------------------------------
+             * ÇİZİM CANVAS'I
+             * -----------------------------------------------------
+             */
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clipToBounds()
+                    .pointerInput(
+                        currentTool,
+                        currentShape,
+                        currentColor,
+                        toolSettings,
+                        isFillEnabled,
+                        currentFillColor
+                    ) {
 
-                                paths = eraseAtPoint(
-                                    paths,
-                                    Point(
-                                        offset.x,
-                                        offset.y
-                                    ),
-                                    toolSizes[ToolType.ERASER]
-                                        ?: 24f
-                                )
+                        detectDragGestures(
 
-                            } else {
+                            onDragStart = { offset ->
 
                                 currentPathPoints.clear()
 
@@ -690,528 +979,198 @@ fun DrawingCanvas(
                                         offset.y
                                     )
                                 )
-                            }
-                        },
+                            },
 
-                        onDrag = { change, _ ->
+                            onDrag = { change, _ ->
 
-                            val point = Point(
-                                change.position.x,
-                                change.position.y
-                            )
-
-                            if (currentTool == ToolType.ERASER) {
-
-                                paths = eraseAtPoint(
-                                    paths,
-                                    point,
-                                    toolSizes[ToolType.ERASER]
-                                        ?: 24f
-                                )
-
-                            } else if (currentTool == ToolType.SHAPE) {
-
-                                if (currentPathPoints.size > 1) {
-                                    currentPathPoints.removeAt(1)
-                                }
-
-                                currentPathPoints.add(point)
-
-                            } else {
-
-                                currentPathPoints.add(point)
-                            }
-                        },
-
-                        onDragEnd = {
-
-                            /* =============================
-                             * ERASER
-                             * ============================= */
-
-                            if (currentTool == ToolType.ERASER) {
-
-                                val before =
-                                    eraseStartSnapshot
-
+                                /**
+                                 * Şekiller:
+                                 * sadece başlangıç ve bitiş
+                                 */
                                 if (
-                                    before != null &&
-                                    before != paths
+                                    currentTool ==
+                                    ToolType.SHAPE
                                 ) {
 
-                                    undoStack.add(before)
-
-                                    if (undoStack.size > 50) {
-                                        undoStack.removeAt(0)
+                                    if (
+                                        currentPathPoints.size >
+                                        1
+                                    ) {
+                                        currentPathPoints.removeAt(
+                                            1
+                                        )
                                     }
 
-                                    redoStack.clear()
-
-                                    serialize(paths)
-                                }
-
-                                eraseStartSnapshot = null
-
-                            } else {
-
-                                if (currentPathPoints.isNotEmpty()) {
-
-                                    val size =
-                                        toolSizes[currentTool]
-                                            ?: toolConfig(
-                                                currentTool
-                                            ).defaultSize
-
-                                    val opacity =
-                                        toolOpacities[currentTool]
-                                            ?: toolConfig(
-                                                currentTool
-                                            ).defaultOpacity
-
-                                    val colorString =
-                                        colorToHex(currentColor)
-
-                                    val fillColorString =
-                                        if (isFillEnabled)
-                                            colorToHex(
-                                                currentFillColor
-                                            )
-                                        else null
-
-                                    val newPath =
-                                        DrawPath(
-                                            points =
-                                                currentPathPoints
-                                                    .toList(),
-                                            colorHex =
-                                                colorString,
-                                            strokeWidth = size,
-                                            toolType =
-                                                currentTool,
-                                            shapeType =
-                                                if (
-                                                    currentTool ==
-                                                    ToolType.SHAPE
-                                                ) {
-                                                    currentShape
-                                                } else {
-                                                    null
-                                                },
-                                            isFilled =
-                                                isFillEnabled,
-                                            fillColorHex =
-                                                fillColorString,
-                                            opacity = opacity
+                                    currentPathPoints.add(
+                                        Point(
+                                            change.position.x,
+                                            change.position.y
                                         )
-
-                                    commit(
-                                        paths + newPath
                                     )
 
-                                    currentPathPoints.clear()
+                                } else {
+
+                                    currentPathPoints.add(
+                                        Point(
+                                            change.position.x,
+                                            change.position.y
+                                        )
+                                    )
                                 }
-                            }
-                        }
-                    )
-                }
-        ) {
-
-            /* EXISTING PATHS */
-
-            paths.forEach { drawDataPath(it) }
-
-            /* CURRENT PREVIEW */
-
-            if (currentPathPoints.isNotEmpty()) {
-
-                val size =
-                    toolSizes[currentTool]
-                        ?: toolConfig(
-                            currentTool
-                        ).defaultSize
-
-                val opacity =
-                    toolOpacities[currentTool]
-                        ?: toolConfig(
-                            currentTool
-                        ).defaultOpacity
-
-                val preview =
-                    DrawPath(
-                        points =
-                            currentPathPoints.toList(),
-                        colorHex =
-                            colorToHex(currentColor),
-                        strokeWidth = size,
-                        toolType = currentTool,
-                        shapeType =
-                            if (
-                                currentTool ==
-                                ToolType.SHAPE
-                            ) {
-                                currentShape
-                            } else {
-                                null
                             },
-                        isFilled = isFillEnabled,
-                        fillColorHex =
-                            if (isFillEnabled)
-                                colorToHex(
-                                    currentFillColor
-                                )
-                            else null,
-                        opacity = opacity
-                    )
 
-                drawDataPath(preview)
+                            onDragEnd = {
+
+                                if (
+                                    currentPathPoints.isEmpty()
+                                ) {
+                                    return@detectDragGestures
+                                }
+
+                                val settings =
+                                    toolSettings[currentTool]
+                                        ?: ToolSettings(
+                                            4f,
+                                            1f
+                                        )
+
+                                val newPath =
+                                    DrawPath(
+                                        points =
+                                            currentPathPoints.toList(),
+                                        colorHex =
+                                            currentColor.toHex(),
+                                        strokeWidth =
+                                            settings.size,
+                                        toolType =
+                                            currentTool,
+                                        shapeType =
+                                            if (
+                                                currentTool ==
+                                                ToolType.SHAPE
+                                            )
+                                                currentShape
+                                            else
+                                                null,
+                                        isFilled =
+                                            isFillEnabled,
+                                        fillColorHex =
+                                            if (
+                                                isFillEnabled
+                                            )
+                                                currentFillColor.toHex()
+                                            else
+                                                null,
+                                        opacity =
+                                            settings.opacity
+                                    )
+
+                                /**
+                                 * Yeni çizim yapılınca
+                                 * eski state undo'ya gider.
+                                 */
+                                undoStack =
+                                    undoStack + document
+
+                                redoStack =
+                                    emptyList()
+
+                                document =
+                                    document.copy(
+                                        paths =
+                                            document.paths +
+                                                    newPath
+                                    )
+
+                                currentPathPoints.clear()
+
+                                saveCurrentState()
+                            }
+                        )
+                    }
+            ) {
+
+                /**
+                 * Önceden kaydedilmiş çizimler.
+                 */
+                document.paths.forEach {
+                    drawDataPath(it)
+                }
+
+                /**
+                 * O anda çizilen preview.
+                 */
+                if (
+                    currentPathPoints.isNotEmpty()
+                ) {
+
+                    val settings =
+                        toolSettings[currentTool]
+                            ?: ToolSettings(
+                                4f,
+                                1f
+                            )
+
+                    val preview =
+                        DrawPath(
+                            points =
+                                currentPathPoints.toList(),
+                            colorHex =
+                                currentColor.toHex(),
+                            strokeWidth =
+                                settings.size,
+                            toolType =
+                                currentTool,
+                            shapeType =
+                                if (
+                                    currentTool ==
+                                    ToolType.SHAPE
+                                )
+                                    currentShape
+                                else
+                                    null,
+                            isFilled =
+                                isFillEnabled,
+                            fillColorHex =
+                                if (
+                                    isFillEnabled
+                                )
+                                    currentFillColor.toHex()
+                                else
+                                    null,
+                            opacity =
+                                settings.opacity
+                        )
+
+                    drawDataPath(preview)
+                }
             }
         }
     }
-
-    /* ========================================================
-     * COLOR PALETTE
-     * ======================================================== */
-
-    if (showColorPicker) {
-
-        AlertDialog(
-            onDismissRequest = {
-                showColorPicker = false
-            },
-
-            title = {
-                Text("Renk")
-            },
-
-            text = {
-
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-
-                    /*
-                     * Fotoğraf 3'teki ana renk matrisi
-                     */
-
-                    val palette = listOf(
-                        listOf(
-                            "#003B4D",
-                            "#003C8F",
-                            "#28004F",
-                            "#51006B",
-                            "#720000",
-                            "#990000",
-                            "#7A3200",
-                            "#806000",
-                            "#777000",
-                            "#263000",
-                            "#202020"
-                        ),
-
-                        listOf(
-                            "#00657F",
-                            "#0057C7",
-                            "#4700A8",
-                            "#7800A8",
-                            "#B00058",
-                            "#D00000",
-                            "#D85A00",
-                            "#C98700",
-                            "#C7BD00",
-                            "#607A00",
-                            "#555555"
-                        ),
-
-                        listOf(
-                            "#008FB5",
-                            "#1476E8",
-                            "#7624D8",
-                            "#B328D7",
-                            "#ED287C",
-                            "#F13B24",
-                            "#F36D00",
-                            "#F2A400",
-                            "#E6DF00",
-                            "#87B400",
-                            "#808080"
-                        ),
-
-                        listOf(
-                            "#00BFEF",
-                            "#4296F5",
-                            "#A04BE5",
-                            "#D45CE4",
-                            "#F56BA4",
-                            "#F57A6D",
-                            "#F59B55",
-                            "#F6C45C",
-                            "#F1ED73",
-                            "#B4D878",
-                            "#AAAAAA"
-                        ),
-
-                        listOf(
-                            "#8EDFF2",
-                            "#A7CBFA",
-                            "#D0A7F5",
-                            "#E5B5EB",
-                            "#F7C7D9",
-                            "#F8C8C2",
-                            "#F8D8B4",
-                            "#F8E4B8",
-                            "#F4F0B4",
-                            "#D9EAB8",
-                            "#D0D0D0"
-                        ),
-
-                        listOf(
-                            "#D8F3FA",
-                            "#D9E8FC",
-                            "#EBDDF9",
-                            "#F3DDF3",
-                            "#F8E5EC",
-                            "#F9E7E4",
-                            "#FAECDD",
-                            "#FAF1D8",
-                            "#F7F4D8",
-                            "#EDF4D9",
-                            "#EEEEEE"
-                        )
-                    )
-
-                    palette.forEach { row ->
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(2.dp)
-                        ) {
-
-                            row.forEach { hex ->
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .aspectRatio(1f)
-                                        .background(
-                                            Color(
-                                                android.graphics.Color.parseColor(
-                                                    hex
-                                                )
-                                            )
-                                        )
-                                        .clickable {
-
-                                            currentColor =
-                                                Color(
-                                                    android.graphics.Color.parseColor(
-                                                        hex
-                                                    )
-                                                )
-
-                                            showColorPicker =
-                                                false
-                                        }
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(
-                        modifier = Modifier.height(12.dp)
-                    )
-
-                    /*
-                     * Hızlı renkler
-                     */
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceEvenly
-                    ) {
-
-                        listOf(
-                            Color(0xFF2196F3),
-                            Color(0xFFF44336),
-                            Color(0xFFFF9800),
-                            Color(0xFFFFEB3B),
-                            Color(0xFF4CAF50),
-                            Color(0xFF222222)
-                        ).forEach { color ->
-
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(
-                                        color,
-                                        CircleShape
-                                    )
-                                    .border(
-                                        2.dp,
-                                        if (
-                                            currentColor ==
-                                            color
-                                        )
-                                            Color.Black
-                                        else
-                                            Color.Transparent,
-                                        CircleShape
-                                    )
-                                    .clickable {
-
-                                        currentColor =
-                                            color
-
-                                        showColorPicker =
-                                            false
-                                    }
-                            )
-                        }
-                    }
-                }
-            },
-
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showColorPicker = false
-                    }
-                ) {
-                    Text("Tamam")
-                }
-            }
-        )
-    }
-
-    /* ========================================================
-     * SHAPE PICKER
-     * ======================================================== */
-
-    if (showShapePicker) {
-
-        AlertDialog(
-            onDismissRequest = {
-                showShapePicker = false
-            },
-
-            title = {
-                Text("Şekil")
-            },
-
-            text = {
-
-                Column {
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceEvenly
-                    ) {
-
-                        ShapeButton(
-                            icon = Icons.Default.Rectangle,
-                            name = "Dikdörtgen"
-                        ) {
-                            currentShape =
-                                ShapeType.RECTANGLE
-
-                            currentTool =
-                                ToolType.SHAPE
-
-                            showShapePicker =
-                                false
-                        }
-
-                        ShapeButton(
-                            icon = Icons.Default.Circle,
-                            name = "Daire"
-                        ) {
-                            currentShape =
-                                ShapeType.CIRCLE
-
-                            currentTool =
-                                ToolType.SHAPE
-
-                            showShapePicker =
-                                false
-                        }
-
-                        ShapeButton(
-                            icon = Icons.Default.ChangeHistory,
-                            name = "Üçgen"
-                        ) {
-                            currentShape =
-                                ShapeType.TRIANGLE
-
-                            currentTool =
-                                ToolType.SHAPE
-
-                            showShapePicker =
-                                false
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceEvenly
-                    ) {
-
-                        ShapeButton(
-                            icon =
-                                Icons.Default.FilterTiltShift,
-                            name = "Elips"
-                        ) {
-                            currentShape =
-                                ShapeType.ELLIPSE
-
-                            currentTool =
-                                ToolType.SHAPE
-
-                            showShapePicker =
-                                false
-                        }
-
-                        ShapeButton(
-                            icon =
-                                Icons.Default.Architecture,
-                            name = "Yay"
-                        ) {
-                            currentShape =
-                                ShapeType.ARC
-
-                            currentTool =
-                                ToolType.SHAPE
-
-                            showShapePicker =
-                                false
-                        }
-                    }
-                }
-            },
-
-            confirmButton = {}
-        )
-    }
 }
 
-/* ============================================================
+/**
+ * -------------------------------------------------------------
  * TOOL BUTTON
- * ============================================================ */
-
+ * -------------------------------------------------------------
+ *
+ * 1. dokunuş = seç
+ *
+ * 2. dokunuş = altında floating ayar menüsü aç
+ */
 @Composable
 private fun ToolButton(
+    tool: ToolType,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
     selected: Boolean,
-    onClick: () -> Unit
+    expanded: Boolean,
+    onClick: () -> Unit,
+    settings: ToolSettings,
+    onSettingsChanged: (ToolSettings) -> Unit,
+    showOpacity: Boolean = true
 ) {
 
-    Column(
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
+    Box {
 
         IconButton(
             onClick = onClick
@@ -1219,7 +1178,8 @@ private fun ToolButton(
 
             Icon(
                 icon,
-                contentDescription = label,
+                contentDescription =
+                    toolDisplayName(tool),
                 tint =
                     if (selected)
                         MaterialTheme.colorScheme.primary
@@ -1228,99 +1188,371 @@ private fun ToolButton(
             )
         }
 
-        if (selected) {
+        /**
+         * İkinci tıklamada açılan floating menü.
+         */
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {},
+            modifier = Modifier.width(300.dp)
+        ) {
 
-            Box(
-                modifier = Modifier
-                    .width(24.dp)
-                    .height(2.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+
+                Text(
+                    toolDisplayName(tool),
+                    style =
+                        MaterialTheme.typography.titleSmall
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(8.dp)
+                )
+
+                /**
+                 * BOYUT
+                 */
+                Text(
+                    "Boyut: ${settings.size.toInt()} px",
+                    style =
+                        MaterialTheme.typography.labelMedium
+                )
+
+                Slider(
+                    value = settings.size,
+                    onValueChange = {
+                        onSettingsChanged(
+                            settings.copy(
+                                size = it
+                            )
+                        )
+                    },
+                    valueRange =
+                        toolSizeRange(tool)
+                )
+
+                /**
+                 * OPACITY
+                 *
+                 * Silgide gösterilmiyor.
+                 */
+                if (showOpacity) {
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(4.dp)
                     )
-            )
+
+                    Text(
+                        "Opaklık: ${(settings.opacity * 100).toInt()}%",
+                        style =
+                            MaterialTheme.typography.labelMedium
+                    )
+
+                    Slider(
+                        value =
+                            settings.opacity,
+                        onValueChange = {
+                            onSettingsChanged(
+                                settings.copy(
+                                    opacity = it
+                                )
+                            )
+                        },
+                        valueRange =
+                            0.05f..1f
+                    )
+                }
+
+                Spacer(
+                    modifier =
+                        Modifier.height(8.dp)
+                )
+
+                /**
+                 * Hızlı boyutlar
+                 */
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.SpaceEvenly
+                ) {
+
+                    listOf(
+                        2f,
+                        5f,
+                        10f,
+                        20f,
+                        40f
+                    ).forEach { size ->
+
+                        OutlinedButton(
+                            onClick = {
+
+                                val allowed =
+                                    toolSizeRange(tool)
+
+                                onSettingsChanged(
+                                    settings.copy(
+                                        size =
+                                            size.coerceIn(
+                                                allowed.start,
+                                                allowed.endInclusive
+                                            )
+                                    )
+                                )
+                            },
+                            contentPadding =
+                                PaddingValues(
+                                    horizontal = 10.dp,
+                                    vertical = 0.dp
+                                )
+                        ) {
+                            Text(
+                                size.toInt().toString()
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-/* ============================================================
- * SHAPE BUTTON
- * ============================================================ */
-
+/**
+ * -------------------------------------------------------------
+ * RENK PALETİ
+ * -------------------------------------------------------------
+ *
+ * Fotoğraf 3'teki sisteme benzer:
+ *
+ * - üstte geniş renk ızgarası
+ * - altta hızlı renkler
+ */
 @Composable
-private fun ShapeButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    name: String,
-    onClick: () -> Unit
+private fun ColorPalettePopup(
+    expanded: Boolean,
+    currentColor: Color,
+    onColorSelected: (Color) -> Unit,
+    onDismiss: () -> Unit
 ) {
 
-    Column(
-        horizontalAlignment =
-            Alignment.CenterHorizontally
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.width(310.dp)
     ) {
 
-        IconButton(
-            onClick = onClick
+        Column(
+            modifier =
+                Modifier.padding(12.dp)
         ) {
-            Icon(
-                icon,
-                contentDescription = name
+
+            Text(
+                "Renk",
+                style =
+                    MaterialTheme.typography.titleSmall
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(8.dp)
+            )
+
+            /**
+             * Renk ızgarası.
+             */
+            val hues =
+                listOf(
+                    0f,
+                    30f,
+                    60f,
+                    90f,
+                    120f,
+                    150f,
+                    180f,
+                    210f,
+                    240f,
+                    270f,
+                    300f,
+                    330f
+                )
+
+            val values =
+                listOf(
+                    1f,
+                    0.85f,
+                    0.70f,
+                    0.55f,
+                    0.40f,
+                    0.25f
+                )
+
+            Column(
+                verticalArrangement =
+                    Arrangement.spacedBy(4.dp)
+            ) {
+
+                values.forEach { value ->
+
+                    Row(
+                        horizontalArrangement =
+                            Arrangement.spacedBy(4.dp)
+                    ) {
+
+                        hues.forEach { hue ->
+
+                            val color =
+                                Color.hsv(
+                                    hue = hue,
+                                    saturation = 1f,
+                                    value = value
+                                )
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(20.dp)
+                                        .background(
+                                            color
+                                        )
+                                        .border(
+                                            if (
+                                                currentColor ==
+                                                color
+                                            )
+                                                2.dp
+                                            else
+                                                0.dp,
+                                            Color.Black
+                                        )
+                                        .clickable {
+                                            onColorSelected(
+                                                color
+                                            )
+                                        }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(12.dp)
+            )
+
+            HorizontalDivider()
+
+            Spacer(
+                modifier =
+                    Modifier.height(10.dp)
+            )
+
+            /**
+             * Hızlı renkler.
+             */
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.SpaceEvenly
+            ) {
+
+                val quickColors =
+                    listOf(
+                        Color.Blue,
+                        Color.Red,
+                        Color(0xFFFF9800),
+                        Color.Yellow,
+                        Color.Green,
+                        Color.Black
+                    )
+
+                quickColors.forEach { color ->
+
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(28.dp)
+                                .background(
+                                    color,
+                                    CircleShape
+                                )
+                                .border(
+                                    if (
+                                        currentColor ==
+                                        color
+                                    )
+                                        2.dp
+                                    else
+                                        0.dp,
+                                    Color.Gray,
+                                    CircleShape
+                                )
+                                .clickable {
+                                    onColorSelected(
+                                        color
+                                    )
+                                }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * -------------------------------------------------------------
+ * PATH RENDERER
+ * -------------------------------------------------------------
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataPath(
+    drawPath: DrawPath
+) {
+
+    if (drawPath.points.isEmpty()) {
+        return
+    }
+
+    /**
+     * Silgi:
+     *
+     * Beyaz çizim alanında beyaz olarak davranır.
+     *
+     * Toolbar artık Canvas'ın dışında olduğu için
+     * toolbar silinemez.
+     */
+    if (drawPath.toolType == ToolType.ERASER) {
+
+        val eraserPath =
+            Path()
+
+        eraserPath.moveTo(
+            drawPath.points.first().x,
+            drawPath.points.first().y
+        )
+
+        drawPath.points.drop(1).forEach {
+            eraserPath.lineTo(
+                it.x,
+                it.y
             )
         }
 
-        Text(
-            name,
-            style = MaterialTheme.typography.labelSmall
+        drawPath(
+            path = eraserPath,
+            color = Color.White,
+            style = Stroke(
+                width = drawPath.strokeWidth,
+                cap = StrokeCap.Round
+            )
         )
-    }
-}
 
-/* ============================================================
- * ERASER
- * ============================================================ */
-
-private fun eraseAtPoint(
-    source: List<DrawPath>,
-    point: Point,
-    radius: Float
-): List<DrawPath> {
-
-    val threshold = radius + 4f
-
-    return source.filterNot { path ->
-
-        path.points.any { p ->
-
-            distance(
-                p,
-                point
-            ) <= threshold
-        }
-    }
-}
-
-private fun distance(
-    a: Point,
-    b: Point
-): Float {
-
-    val dx = a.x - b.x
-    val dy = a.y - b.y
-
-    return sqrt(
-        dx * dx + dy * dy
-    )
-}
-
-/* ============================================================
- * DRAW PATH
- * ============================================================ */
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope
-    .drawDataPath(
-        drawPath: DrawPath
-    ) {
-
-    if (drawPath.points.isEmpty()) {
         return
     }
 
@@ -1335,11 +1567,96 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             Color.Black
         }
 
-    val color =
-        baseColor.copy(
-            alpha = drawPath.opacity
+    /**
+     * Her aracın kendi karakteri.
+     *
+     * Opacity artık araç tipi değildir.
+     */
+    val alpha =
+        drawPath.opacity.coerceIn(
+            0.05f,
+            1f
         )
 
+    val finalColor =
+        when (drawPath.toolType) {
+
+            ToolType.PENCIL ->
+                baseColor.copy(
+                    alpha = alpha * 0.80f
+                )
+
+            ToolType.PEN ->
+                baseColor.copy(
+                    alpha = alpha
+                )
+
+            ToolType.INK ->
+                baseColor.copy(
+                    alpha = alpha
+                )
+
+            ToolType.BRUSH ->
+                baseColor.copy(
+                    alpha = alpha
+                )
+
+            ToolType.MARKER ->
+                baseColor.copy(
+                    alpha = alpha
+                )
+
+            else ->
+                baseColor.copy(
+                    alpha = alpha
+                )
+        }
+
+    val strokeWidth =
+        when (drawPath.toolType) {
+
+            ToolType.PENCIL ->
+                drawPath.strokeWidth * 0.85f
+
+            ToolType.PEN ->
+                drawPath.strokeWidth
+
+            ToolType.INK ->
+                drawPath.strokeWidth * 1.10f
+
+            ToolType.BRUSH ->
+                drawPath.strokeWidth
+
+            ToolType.MARKER ->
+                drawPath.strokeWidth
+
+            else ->
+                drawPath.strokeWidth
+        }
+
+    val fillColor =
+        if (
+            drawPath.isFilled &&
+            drawPath.fillColorHex != null
+        ) {
+
+            try {
+                Color(
+                    android.graphics.Color.parseColor(
+                        drawPath.fillColorHex
+                    )
+                )
+            } catch (_: Exception) {
+                Color.Transparent
+            }
+
+        } else {
+            Color.Transparent
+        }
+
+    /**
+     * ŞEKİLLER
+     */
     if (
         drawPath.toolType ==
         ToolType.SHAPE &&
@@ -1359,54 +1676,36 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             )
 
         val left =
-            minOf(
+            min(
                 start.x,
                 end.x
             )
 
         val top =
-            minOf(
+            min(
                 start.y,
                 end.y
             )
 
         val width =
             abs(
-                start.x - end.x
+                start.x -
+                        end.x
             )
 
         val height =
             abs(
-                start.y - end.y
+                start.y -
+                        end.y
             )
-
-        val fillColor =
-            if (
-                drawPath.isFilled &&
-                drawPath.fillColorHex != null
-            ) {
-
-                try {
-                    Color(
-                        android.graphics.Color.parseColor(
-                            drawPath.fillColorHex
-                        )
-                    ).copy(
-                        alpha = drawPath.opacity
-                    )
-                } catch (_: Exception) {
-                    Color.Transparent
-                }
-
-            } else {
-                Color.Transparent
-            }
 
         when (drawPath.shapeType) {
 
             ShapeType.RECTANGLE -> {
 
-                if (drawPath.isFilled) {
+                if (
+                    drawPath.isFilled
+                ) {
                     drawRect(
                         color = fillColor,
                         topLeft =
@@ -1423,7 +1722,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                 }
 
                 drawRect(
-                    color = color,
+                    color = finalColor,
                     topLeft =
                         Offset(
                             left,
@@ -1437,7 +1736,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                     style =
                         Stroke(
                             width =
-                                drawPath.strokeWidth
+                                strokeWidth
                         )
                 )
             }
@@ -1445,18 +1744,22 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             ShapeType.CIRCLE -> {
 
                 val radius =
-                    sqrt(
-                        width * width +
-                            height * height
+                    min(
+                        width,
+                        height
                     ) / 2f
 
                 val center =
                     Offset(
-                        left + width / 2f,
-                        top + height / 2f
+                        left +
+                                width / 2f,
+                        top +
+                                height / 2f
                     )
 
-                if (drawPath.isFilled) {
+                if (
+                    drawPath.isFilled
+                ) {
                     drawCircle(
                         color = fillColor,
                         radius = radius,
@@ -1465,62 +1768,69 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                 }
 
                 drawCircle(
-                    color = color,
+                    color = finalColor,
                     radius = radius,
                     center = center,
                     style =
                         Stroke(
                             width =
-                                drawPath.strokeWidth
+                                strokeWidth
                         )
                 )
             }
 
             ShapeType.TRIANGLE -> {
 
-                val triangle =
+                val path =
                     Path().apply {
 
                         moveTo(
-                            left + width / 2f,
+                            left +
+                                    width / 2f,
                             top
                         )
 
                         lineTo(
                             left,
-                            top + height
+                            top +
+                                    height
                         )
 
                         lineTo(
-                            left + width,
-                            top + height
+                            left +
+                                    width,
+                            top +
+                                    height
                         )
 
                         close()
                     }
 
-                if (drawPath.isFilled) {
+                if (
+                    drawPath.isFilled
+                ) {
                     drawPath(
-                        path = triangle,
-                        color = fillColor
+                        path,
+                        fillColor
                     )
                 }
 
                 drawPath(
-                    path = triangle,
-                    color = color,
+                    path,
+                    finalColor,
                     style =
                         Stroke(
                             width =
-                                drawPath.strokeWidth
+                                strokeWidth
                         )
                 )
             }
 
             ShapeType.ELLIPSE -> {
 
-                if (drawPath.isFilled) {
-
+                if (
+                    drawPath.isFilled
+                ) {
                     drawOval(
                         color = fillColor,
                         topLeft =
@@ -1537,7 +1847,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                 }
 
                 drawOval(
-                    color = color,
+                    color = finalColor,
                     topLeft =
                         Offset(
                             left,
@@ -1551,7 +1861,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                     style =
                         Stroke(
                             width =
-                                drawPath.strokeWidth
+                                strokeWidth
                         )
                 )
             }
@@ -1559,7 +1869,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             ShapeType.ARC -> {
 
                 drawArc(
-                    color = color,
+                    color = finalColor,
                     startAngle = 0f,
                     sweepAngle = 180f,
                     useCenter = false,
@@ -1576,7 +1886,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                     style =
                         Stroke(
                             width =
-                                drawPath.strokeWidth
+                                strokeWidth
                         )
                 )
             }
@@ -1584,85 +1894,34 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             null -> Unit
         }
 
-    } else {
+        return
+    }
 
-        val path =
-            Path()
+    /**
+     * NORMAL STROKE
+     */
+    val path =
+        Path()
 
-        path.moveTo(
-            drawPath.points[0].x,
-            drawPath.points[0].y
-        )
+    path.moveTo(
+        drawPath.points.first().x,
+        drawPath.points.first().y
+    )
 
-        drawPath.points
-            .drop(1)
-            .forEach { point ->
-
-                path.lineTo(
-                    point.x,
-                    point.y
-                )
-            }
-
-        val cap =
-            when (drawPath.toolType) {
-
-                ToolType.BRUSH ->
-                    StrokeCap.Round
-
-                ToolType.PENCIL ->
-                    StrokeCap.Round
-
-                ToolType.MARKER ->
-                    StrokeCap.Square
-
-                ToolType.BALLPOINT ->
-                    StrokeCap.Round
-
-                else ->
-                    StrokeCap.Round
-            }
-
-        drawPath(
-            path = path,
-            color = color,
-            style =
-                Stroke(
-                    width =
-                        drawPath.strokeWidth,
-                    cap = cap
-                )
+    drawPath.points.drop(1).forEach {
+        path.lineTo(
+            it.x,
+            it.y
         )
     }
-}
 
-/* ============================================================
- * COLOR → HEX
- * ============================================================ */
-
-private fun colorToHex(
-    color: Color
-): String {
-
-    val r =
-        (color.red * 255)
-            .toInt()
-            .coerceIn(0, 255)
-
-    val g =
-        (color.green * 255)
-            .toInt()
-            .coerceIn(0, 255)
-
-    val b =
-        (color.blue * 255)
-            .toInt()
-            .coerceIn(0, 255)
-
-    return String.format(
-        "#%02X%02X%02X",
-        r,
-        g,
-        b
+    drawPath(
+        path = path,
+        color = finalColor,
+        style =
+            Stroke(
+                width = strokeWidth,
+                cap = StrokeCap.Round
+            )
     )
 }
