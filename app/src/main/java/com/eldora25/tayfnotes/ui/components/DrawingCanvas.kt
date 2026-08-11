@@ -31,9 +31,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.rotate
 
 import androidx.compose.ui.input.pointer.pointerInteropFilter
@@ -93,6 +90,7 @@ enum class ShapeType {
  * POINT
  * =============================================================
  */
+
 @Serializable
 data class Point(
     val x: Float,
@@ -108,6 +106,7 @@ data class Point(
  * DRAW PATH
  * =============================================================
  */
+
 @Serializable
 data class DrawPath(
     val points: List<Point>,
@@ -126,6 +125,7 @@ data class DrawPath(
  * SKETCH IMAGE
  * =============================================================
  */
+
 @Serializable
 data class SketchImage(
     val id: String,
@@ -142,6 +142,7 @@ data class SketchImage(
  * SKETCH DOCUMENT
  * =============================================================
  */
+
 @Serializable
 data class SketchDocument(
     val paths: List<DrawPath> = emptyList(),
@@ -154,6 +155,7 @@ data class SketchDocument(
  * TOOL SETTINGS
  * =============================================================
  */
+
 data class ToolSettings(
     val size: Float,
     val opacity: Float
@@ -165,6 +167,7 @@ data class ToolSettings(
  * DEFAULT TOOL SETTINGS
  * =============================================================
  */
+
 private fun defaultToolSettings(): Map<ToolType, ToolSettings> {
 
     return mapOf(
@@ -212,6 +215,7 @@ private fun defaultToolSettings(): Map<ToolType, ToolSettings> {
  * TOOL DISPLAY NAME
  * =============================================================
  */
+
 private fun toolDisplayName(tool: ToolType): String {
 
     return when (tool) {
@@ -238,6 +242,7 @@ private fun toolDisplayName(tool: ToolType): String {
  * TOOL SIZE RANGE
  * =============================================================
  */
+
 private fun toolSizeRange(
     tool: ToolType
 ): ClosedFloatingPointRange<Float> {
@@ -260,13 +265,30 @@ private fun toolSizeRange(
 /**
  * =============================================================
  * COLOR -> HEX
+ *
+ * IMPORTANT:
+ * No Color.toArgb() dependency.
  * =============================================================
  */
+
 private fun Color.toHex(): String {
+
+    val red =
+        (red.coerceIn(0f, 1f) * 255f).toInt()
+
+    val green =
+        (green.coerceIn(0f, 1f) * 255f).toInt()
+
+    val blue =
+        (blue.coerceIn(0f, 1f) * 255f).toInt()
 
     return String.format(
         "#%06X",
-        0xFFFFFF and this.toArgb()
+        AndroidColor.rgb(
+            red,
+            green,
+            blue
+        ) and 0xFFFFFF
     )
 }
 
@@ -276,6 +298,7 @@ private fun Color.toHex(): String {
  * HEX -> COLOR
  * =============================================================
  */
+
 private fun parseColor(hex: String): Color {
 
     return try {
@@ -296,6 +319,7 @@ private fun parseColor(hex: String): Color {
  * DRAWING CANVAS
  * =============================================================
  */
+
 @Composable
 fun DrawingCanvas(
     modifier: Modifier = Modifier,
@@ -1743,6 +1767,7 @@ fun DrawingCanvas(
  * TOOL BUTTON
  * =============================================================
  */
+
 @Composable
 private fun ToolButton(
 
@@ -1976,6 +2001,7 @@ private fun ToolButton(
  * COLOR PALETTE
  * =============================================================
  */
+
 @Composable
 private fun ColorPalettePopup(
 
@@ -2197,6 +2223,7 @@ private fun ColorPalettePopup(
  * MAIN PATH RENDERER
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawDataPath(
         drawPath: DrawPath
@@ -2332,6 +2359,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * PEN
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawPen(
 
@@ -2408,6 +2436,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * INK
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawInk(
 
@@ -2461,6 +2490,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * PRESSURE WIDTH CURVE
  * =============================================================
  */
+
 private fun pressureWidth(
     pressure: Float
 ): Float {
@@ -2491,6 +2521,7 @@ private fun pressureWidth(
  * PENCIL
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawPencil(
 
@@ -2540,9 +2571,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
     )
 
 
-    /**
-     * Gerçekçi grafit grain.
-     */
     val seed =
         data.points.hashCode().toLong() *
             31L +
@@ -2770,6 +2798,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * BRUSH
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawBrush(
 
@@ -2844,6 +2873,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * BRUSH STAMP
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawBrushStamp(
 
@@ -3034,6 +3064,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
  * MARKER
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawMarker(
 
@@ -3180,8 +3211,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 /**
  * =============================================================
  * VARIABLE STROKE
+ *
+ * Does not use Compose Stroke.
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawVariableStroke(
 
@@ -3348,9 +3382,305 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
  * =============================================================
+ * SHAPE OUTLINE HELPERS
+ *
+ * These replace androidx.compose.ui.graphics.drawscope.Stroke.
+ * =============================================================
+ */
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawRectangleOutline(
+
+        left: Float,
+
+        top: Float,
+
+        width: Float,
+
+        height: Float,
+
+        color: Color,
+
+        strokeWidth: Float
+
+    ) {
+
+    val right =
+        left + width
+
+    val bottom =
+        top + height
+
+    drawLine(
+        color = color,
+        start = Offset(left, top),
+        end = Offset(right, top),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Butt
+    )
+
+    drawLine(
+        color = color,
+        start = Offset(right, top),
+        end = Offset(right, bottom),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Butt
+    )
+
+    drawLine(
+        color = color,
+        start = Offset(right, bottom),
+        end = Offset(left, bottom),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Butt
+    )
+
+    drawLine(
+        color = color,
+        start = Offset(left, bottom),
+        end = Offset(left, top),
+        strokeWidth = strokeWidth,
+        cap = StrokeCap.Butt
+    )
+}
+
+
+/**
+ * =============================================================
+ * ELLIPSE OUTLINE
+ * =============================================================
+ */
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawEllipseOutline(
+
+        topLeft: Offset,
+
+        size: Size,
+
+        color: Color,
+
+        strokeWidth: Float,
+
+        segments: Int = 96
+
+    ) {
+
+    if (
+        size.width <= 0f ||
+        size.height <= 0f
+    ) {
+        return
+    }
+
+
+    val centerX =
+        topLeft.x +
+            size.width / 2f
+
+
+    val centerY =
+        topLeft.y +
+            size.height / 2f
+
+
+    val radiusX =
+        size.width / 2f
+
+
+    val radiusY =
+        size.height / 2f
+
+
+    var previous =
+        Offset(
+            centerX + radiusX,
+            centerY
+        )
+
+
+    for (i in 1..segments) {
+
+        val angle =
+            2f *
+                PI.toFloat() *
+                i.toFloat() /
+                segments.toFloat()
+
+
+        val current =
+            Offset(
+
+                centerX +
+                    radiusX *
+                    cos(angle),
+
+                centerY +
+                    radiusY *
+                    sin(angle)
+            )
+
+
+        drawLine(
+
+            color =
+                color,
+
+            start =
+                previous,
+
+            end =
+                current,
+
+            strokeWidth =
+                strokeWidth,
+
+            cap =
+                StrokeCap.Round
+        )
+
+
+        previous =
+            current
+    }
+}
+
+
+/**
+ * =============================================================
+ * ARC OUTLINE
+ * =============================================================
+ */
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawArcOutline(
+
+        topLeft: Offset,
+
+        size: Size,
+
+        color: Color,
+
+        strokeWidth: Float,
+
+        startAngleDegrees: Float = 0f,
+
+        sweepAngleDegrees: Float = 180f,
+
+        segments: Int = 64
+
+    ) {
+
+    if (
+        size.width <= 0f ||
+        size.height <= 0f
+    ) {
+        return
+    }
+
+
+    val centerX =
+        topLeft.x +
+            size.width / 2f
+
+
+    val centerY =
+        topLeft.y +
+            size.height / 2f
+
+
+    val radiusX =
+        size.width / 2f
+
+
+    val radiusY =
+        size.height / 2f
+
+
+    val safeSegments =
+        segments.coerceAtLeast(2)
+
+
+    var previousAngle =
+        Math.toRadians(
+            startAngleDegrees.toDouble()
+        ).toFloat()
+
+
+    var previous =
+        Offset(
+
+            centerX +
+                radiusX *
+                cos(previousAngle),
+
+            centerY +
+                radiusY *
+                sin(previousAngle)
+        )
+
+
+    for (i in 1..safeSegments) {
+
+        val progress =
+            i.toFloat() /
+                safeSegments.toFloat()
+
+
+        val angle =
+            Math.toRadians(
+                (
+                    startAngleDegrees +
+                        sweepAngleDegrees *
+                        progress
+                ).toDouble()
+            ).toFloat()
+
+
+        val current =
+            Offset(
+
+                centerX +
+                    radiusX *
+                    cos(angle),
+
+                centerY +
+                    radiusY *
+                    sin(angle)
+            )
+
+
+        drawLine(
+
+            color =
+                color,
+
+            start =
+                previous,
+
+            end =
+                current,
+
+            strokeWidth =
+                strokeWidth,
+
+            cap =
+                StrokeCap.Round
+        )
+
+
+        previous =
+            current
+    }
+}
+
+
+/**
+ * =============================================================
  * SHAPES
  * =============================================================
  */
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
     .drawShape(
 
@@ -3433,6 +3763,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
     when (data.shapeType) {
 
+        /**
+         * -----------------------------------------------------
+         * RECTANGLE
+         * -----------------------------------------------------
+         */
+
         ShapeType.RECTANGLE -> {
 
             if (data.isFilled) {
@@ -3457,35 +3793,34 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             }
 
 
-            drawRect(
+            drawRectangleOutline(
+
+                left =
+                    left,
+
+                top =
+                    top,
+
+                width =
+                    width,
+
+                height =
+                    height,
 
                 color =
                     strokeColor,
 
-                topLeft =
-                    Offset(
-                        left,
-                        top
-                    ),
-
-                size =
-                    Size(
-                        width,
-                        height
-                    ),
-
-                style =
-                    Stroke(
-
-                        width =
-                            data.strokeWidth,
-
-                        join =
-                            StrokeJoin.Miter
-                    )
+                strokeWidth =
+                    data.strokeWidth
             )
         }
 
+
+        /**
+         * -----------------------------------------------------
+         * CIRCLE
+         * -----------------------------------------------------
+         */
 
         ShapeType.CIRCLE -> {
 
@@ -3523,25 +3858,34 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             }
 
 
-            drawCircle(
+            drawEllipseOutline(
+
+                topLeft =
+                    Offset(
+                        center.x - radius,
+                        center.y - radius
+                    ),
+
+                size =
+                    Size(
+                        radius * 2f,
+                        radius * 2f
+                    ),
 
                 color =
                     strokeColor,
 
-                radius =
-                    radius,
-
-                center =
-                    center,
-
-                style =
-                    Stroke(
-                        width =
-                            data.strokeWidth
-                    )
+                strokeWidth =
+                    data.strokeWidth
             )
         }
 
+
+        /**
+         * -----------------------------------------------------
+         * TRIANGLE
+         * -----------------------------------------------------
+         */
 
         ShapeType.TRIANGLE -> {
 
@@ -3582,20 +3926,56 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             }
 
 
-            drawPath(
+            val p1 =
+                Offset(
+                    left + width / 2f,
+                    top
+                )
 
-                path,
+            val p2 =
+                Offset(
+                    left,
+                    top + height
+                )
 
-                strokeColor,
+            val p3 =
+                Offset(
+                    left + width,
+                    top + height
+                )
 
-                style =
-                    Stroke(
-                        width =
-                            data.strokeWidth
-                    )
+
+            drawLine(
+                color = strokeColor,
+                start = p1,
+                end = p2,
+                strokeWidth = data.strokeWidth,
+                cap = StrokeCap.Round
+            )
+
+            drawLine(
+                color = strokeColor,
+                start = p2,
+                end = p3,
+                strokeWidth = data.strokeWidth,
+                cap = StrokeCap.Round
+            )
+
+            drawLine(
+                color = strokeColor,
+                start = p3,
+                end = p1,
+                strokeWidth = data.strokeWidth,
+                cap = StrokeCap.Round
             )
         }
 
+
+        /**
+         * -----------------------------------------------------
+         * ELLIPSE
+         * -----------------------------------------------------
+         */
 
         ShapeType.ELLIPSE -> {
 
@@ -3621,10 +4001,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
             }
 
 
-            drawOval(
-
-                color =
-                    strokeColor,
+            drawEllipseOutline(
 
                 topLeft =
                     Offset(
@@ -3638,30 +4015,24 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                         height
                     ),
 
-                style =
-                    Stroke(
-                        width =
-                            data.strokeWidth
-                    )
+                color =
+                    strokeColor,
+
+                strokeWidth =
+                    data.strokeWidth
             )
         }
 
 
+        /**
+         * -----------------------------------------------------
+         * ARC
+         * -----------------------------------------------------
+         */
+
         ShapeType.ARC -> {
 
-            drawArc(
-
-                color =
-                    strokeColor,
-
-                startAngle =
-                    0f,
-
-                sweepAngle =
-                    180f,
-
-                useCenter =
-                    false,
+            drawArcOutline(
 
                 topLeft =
                     Offset(
@@ -3675,11 +4046,17 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                         height
                     ),
 
-                style =
-                    Stroke(
-                        width =
-                            data.strokeWidth
-                    )
+                color =
+                    strokeColor,
+
+                strokeWidth =
+                    data.strokeWidth,
+
+                startAngleDegrees =
+                    0f,
+
+                sweepAngleDegrees =
+                    180f
             )
         }
 
