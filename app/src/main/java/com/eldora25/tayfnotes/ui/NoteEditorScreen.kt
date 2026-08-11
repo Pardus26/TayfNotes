@@ -53,9 +53,21 @@ fun NoteEditorScreen(
 ) {
     val context = LocalContext.current
 
+    /*
+     * ------------------------------------------------------------
+     * NOTE ID
+     * ------------------------------------------------------------
+     */
+
     val noteId = remember {
         note?.id ?: System.currentTimeMillis().toString()
     }
+
+    /*
+     * ------------------------------------------------------------
+     * NOTE STATE
+     * ------------------------------------------------------------
+     */
 
     var title by remember {
         mutableStateOf(note?.title ?: "")
@@ -78,10 +90,14 @@ fun NoteEditorScreen(
     }
 
     /*
-     * Images attached to the normal note.
+     * ------------------------------------------------------------
+     * NORMAL NOTE IMAGES
+     * ------------------------------------------------------------
      *
-     * These are intentionally separate from Sketch images.
+     * These images belong to the normal note.
+     * They are intentionally kept separate from sketch data.
      */
+
     var imageUris by remember {
         mutableStateOf(
             note?.imageUris ?: emptyList()
@@ -89,22 +105,30 @@ fun NoteEditorScreen(
     }
 
     /*
-     * Temporary URI returned from the Sketch image picker.
-     *
-     * DrawingCanvas consumes this URI and stores it inside
-     * SketchDocument.
+     * ------------------------------------------------------------
+     * AUDIO
+     * ------------------------------------------------------------
      */
-    var pendingSketchImageUri by remember {
-        mutableStateOf<String?>(null)
-    }
 
     var audioPath by remember {
         mutableStateOf(note?.audioPath)
     }
 
+    /*
+     * ------------------------------------------------------------
+     * SKETCH DATA
+     * ------------------------------------------------------------
+     */
+
     var sketchData by remember {
         mutableStateOf(note?.sketchData)
     }
+
+    /*
+     * ------------------------------------------------------------
+     * CHECKLIST
+     * ------------------------------------------------------------
+     */
 
     val initialItems = remember(note) {
 
@@ -114,14 +138,18 @@ fun NoteEditorScreen(
         ) {
 
             try {
+
                 Json.decodeFromString<List<ChecklistItem>>(
                     note.content
                 )
+
             } catch (_: Exception) {
+
                 emptyList()
             }
 
         } else {
+
             emptyList()
         }
     }
@@ -129,6 +157,12 @@ fun NoteEditorScreen(
     var checklistItems by remember {
         mutableStateOf(initialItems)
     }
+
+    /*
+     * ------------------------------------------------------------
+     * UI STATE
+     * ------------------------------------------------------------
+     */
 
     var isPreviewMode by remember {
         mutableStateOf(false)
@@ -149,6 +183,12 @@ fun NoteEditorScreen(
         mutableStateOf(false)
     }
 
+    /*
+     * ------------------------------------------------------------
+     * AUDIO RECORDER
+     * ------------------------------------------------------------
+     */
+
     val recorder = remember {
         AudioRecorder(context)
     }
@@ -157,14 +197,23 @@ fun NoteEditorScreen(
         mutableStateOf(false)
     }
 
+    /*
+     * ------------------------------------------------------------
+     * BACKGROUND COLOR
+     * ------------------------------------------------------------
+     */
+
     val backgroundColor =
         try {
+
             Color(
                 android.graphics.Color.parseColor(
                     colorHex
                 )
             )
+
         } catch (_: Exception) {
+
             MaterialTheme.colorScheme.surface
         }
 
@@ -173,30 +222,16 @@ fun NoteEditorScreen(
      * NORMAL NOTE IMAGE PICKER
      * ------------------------------------------------------------
      */
+
     val galleryLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.GetContent()
         ) { uri ->
 
             uri?.let {
+
                 imageUris =
                     imageUris + it.toString()
-            }
-        }
-
-    /*
-     * ------------------------------------------------------------
-     * SKETCH IMAGE PICKER
-     * ------------------------------------------------------------
-     */
-    val sketchGalleryLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.GetContent()
-        ) { uri ->
-
-            uri?.let {
-                pendingSketchImageUri =
-                    it.toString()
             }
         }
 
@@ -205,6 +240,7 @@ fun NoteEditorScreen(
      * AUTO SAVE
      * ------------------------------------------------------------
      */
+
     LaunchedEffect(
         title,
         content,
@@ -228,14 +264,27 @@ fun NoteEditorScreen(
 
             delay(1000)
 
+            /*
+             * ----------------------------------------------------
+             * FINAL CONTENT
+             * ----------------------------------------------------
+             */
+
             var finalContent = content
 
             if (checklistItems.isNotEmpty()) {
+
                 finalContent =
                     Json.encodeToString(
                         checklistItems
                     )
             }
+
+            /*
+             * ----------------------------------------------------
+             * AUTOMATIC TITLE
+             * ----------------------------------------------------
+             */
 
             var finalTitle = title
 
@@ -250,6 +299,7 @@ fun NoteEditorScreen(
                             ?: ""
 
                     } else {
+
                         content
                     }
 
@@ -258,11 +308,19 @@ fun NoteEditorScreen(
                     finalTitle =
                         textForTitle
                             .trim()
-                            .split("\\s+".toRegex())
+                            .split(
+                                "\\s+".toRegex()
+                            )
                             .take(5)
                             .joinToString(" ")
                 }
             }
+
+            /*
+             * ----------------------------------------------------
+             * CREATE NOTE
+             * ----------------------------------------------------
+             */
 
             val finalNote =
                 Note(
@@ -270,18 +328,32 @@ fun NoteEditorScreen(
                     title = finalTitle,
                     content = finalContent,
                     colorHex = colorHex,
+
                     type =
                         if (checklistItems.isNotEmpty()) {
+
                             NoteType.CHECKLIST
+
                         } else {
+
                             NoteType.TEXT
                         },
+
                     reminderTimestamp =
                         reminderTimestamp,
-                    folderId = folderId,
-                    imageUris = imageUris,
-                    audioPath = audioPath,
-                    sketchData = sketchData,
+
+                    folderId =
+                        folderId,
+
+                    imageUris =
+                        imageUris,
+
+                    audioPath =
+                        audioPath,
+
+                    sketchData =
+                        sketchData,
+
                     lastModified =
                         System.currentTimeMillis()
                 )
@@ -289,6 +361,12 @@ fun NoteEditorScreen(
             onSave(finalNote)
         }
     }
+
+    /*
+     * ============================================================
+     * MAIN SCAFFOLD
+     * ============================================================
+     */
 
     Scaffold(
 
@@ -324,7 +402,8 @@ fun NoteEditorScreen(
 
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Geri"
+                                contentDescription =
+                                    "Geri"
                             )
                         }
                     }
@@ -332,11 +411,20 @@ fun NoteEditorScreen(
 
                 actions = {
 
+                    /*
+                     * =================================================
+                     * NORMAL NOTE MODE
+                     * =================================================
+                     */
+
                     if (!isSketchMode) {
 
                         /*
-                         * Enter Sketch mode.
+                         * -------------------------------------------------
+                         * ENTER SKETCH MODE
+                         * -------------------------------------------------
                          */
+
                         IconButton(
                             onClick = {
                                 isSketchMode = true
@@ -357,10 +445,14 @@ fun NoteEditorScreen(
                         }
 
                         /*
-                         * Normal note image.
+                         * -------------------------------------------------
+                         * ADD IMAGE TO NORMAL NOTE
+                         * -------------------------------------------------
                          */
+
                         IconButton(
                             onClick = {
+
                                 galleryLauncher.launch(
                                     "image/*"
                                 )
@@ -381,8 +473,11 @@ fun NoteEditorScreen(
                         }
 
                         /*
-                         * Audio.
+                         * -------------------------------------------------
+                         * AUDIO
+                         * -------------------------------------------------
                          */
+
                         IconButton(
                             onClick = {
 
@@ -418,7 +513,9 @@ fun NoteEditorScreen(
                                 } else {
 
                                     recorder.stopRecording()
-                                    isRecording = false
+
+                                    isRecording =
+                                        false
                                 }
                             }
                         ) {
@@ -430,16 +527,24 @@ fun NoteEditorScreen(
 
                                 Icon(
                                     if (isRecording) {
+
                                         Icons.Default.StopCircle
+
                                     } else {
+
                                         Icons.Default.Mic
                                     },
+
                                     contentDescription =
                                         "Ses",
+
                                     tint =
                                         if (isRecording) {
+
                                             Color.Red
+
                                         } else {
+
                                             LocalContentColor.current
                                         }
                                 )
@@ -447,10 +552,14 @@ fun NoteEditorScreen(
                         }
 
                         /*
-                         * Preview.
+                         * -------------------------------------------------
+                         * PREVIEW
+                         * -------------------------------------------------
                          */
+
                         IconButton(
                             onClick = {
+
                                 isPreviewMode =
                                     !isPreviewMode
                             }
@@ -463,10 +572,14 @@ fun NoteEditorScreen(
 
                                 Icon(
                                     if (isPreviewMode) {
+
                                         Icons.Default.Edit
+
                                     } else {
+
                                         Icons.Default.Visibility
                                     },
+
                                     contentDescription =
                                         "Önizle"
                                 )
@@ -474,8 +587,11 @@ fun NoteEditorScreen(
                         }
 
                         /*
-                         * Delete existing note.
+                         * -------------------------------------------------
+                         * DELETE
+                         * -------------------------------------------------
                          */
+
                         if (note != null) {
 
                             IconButton(
@@ -501,8 +617,18 @@ fun NoteEditorScreen(
                     } else {
 
                         /*
-                         * Exit Sketch mode.
+                         * =================================================
+                         * SKETCH MODE
+                         * =================================================
+                         *
+                         * DrawingCanvas currently supports drawing,
+                         * shapes, colors, fills, marker and eraser.
+                         *
+                         * Image insertion is intentionally not passed
+                         * here because DrawingCanvas does not currently
+                         * expose image parameters.
                          */
+
                         IconButton(
                             onClick = {
                                 isSketchMode = false
@@ -524,8 +650,11 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * Finish / save.
+                     * -----------------------------------------------------
+                     * FINISH / SAVE
+                     * -----------------------------------------------------
                      */
+
                     IconButton(
                         onClick = onBack
                     ) {
@@ -557,36 +686,52 @@ fun NoteEditorScreen(
     ) { paddingValues ->
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(
-                    backgroundColor.copy(
-                        alpha = 0.1f
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(
+                        backgroundColor.copy(
+                            alpha = 0.1f
+                        )
                     )
-                )
         ) {
+
+            /*
+             * =========================================================
+             * EDIT MODE
+             * =========================================================
+             */
 
             if (!isPreviewMode) {
 
                 /*
-                 * ------------------------------------------------
+                 * -----------------------------------------------------
                  * COMMON NOTE HEADER
-                 * ------------------------------------------------
+                 * -----------------------------------------------------
                  */
+
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+
                     horizontalArrangement =
                         Arrangement.SpaceBetween,
+
                     verticalAlignment =
                         Alignment.CenterVertically
                 ) {
 
+                    /*
+                     * FOLDER
+                     */
+
                     Box {
 
                         AssistChip(
+
                             onClick = {
                                 showFolderMenu = true
                             },
@@ -615,32 +760,51 @@ fun NoteEditorScreen(
                         )
 
                         DropdownMenu(
+
                             expanded =
                                 showFolderMenu,
+
                             onDismissRequest = {
                                 showFolderMenu = false
                             }
                         ) {
 
+                            /*
+                             * NO FOLDER
+                             */
+
                             DropdownMenuItem(
+
                                 text = {
                                     Text("Klasör Yok")
                                 },
+
                                 onClick = {
+
                                     folderId = null
-                                    showFolderMenu = false
+
+                                    showFolderMenu =
+                                        false
                                 }
                             )
+
+                            /*
+                             * FOLDERS
+                             */
 
                             folders.forEach { folder ->
 
                                 DropdownMenuItem(
+
                                     text = {
                                         Text(folder.name)
                                     },
+
                                     onClick = {
+
                                         folderId =
                                             folder.id
+
                                         showFolderMenu =
                                             false
                                     }
@@ -649,9 +813,15 @@ fun NoteEditorScreen(
                         }
                     }
 
+                    /*
+                     * COLOR
+                     */
+
                     ColorSelector(
+
                         selectedColorHex =
                             colorHex,
+
                         onColorSelected = {
                             colorHex = it
                         }
@@ -659,36 +829,51 @@ fun NoteEditorScreen(
                 }
 
                 /*
-                 * ------------------------------------------------
+                 * -----------------------------------------------------
                  * TITLE
-                 * ------------------------------------------------
+                 * -----------------------------------------------------
                  */
+
                 TextField(
+
                     value = title,
+
                     onValueChange = {
                         title = it
                     },
+
                     placeholder = {
+
                         Text(
                             "Başlık",
                             style =
                                 MaterialTheme.typography.headlineSmall
                         )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 16.dp
+                            ),
+
                     colors =
                         TextFieldDefaults.colors(
+
                             focusedContainerColor =
                                 Color.Transparent,
+
                             unfocusedContainerColor =
                                 Color.Transparent,
+
                             focusedIndicatorColor =
                                 Color.Transparent,
+
                             unfocusedIndicatorColor =
                                 Color.Transparent
                         ),
+
                     textStyle =
                         MaterialTheme.typography.headlineSmall
                             .copy(
@@ -698,10 +883,11 @@ fun NoteEditorScreen(
                 )
 
                 /*
-                 * =================================================
+                 * =====================================================
                  * SKETCH MODE
-                 * =================================================
+                 * =====================================================
                  */
+
                 if (isSketchMode) {
 
                     DrawingCanvas(
@@ -716,54 +902,43 @@ fun NoteEditorScreen(
 
                         onDataChanged = {
                             sketchData = it
-                        },
-
-                        /*
-                         * Sketch toolbar image button.
-                         */
-                        onRequestImage = {
-                            sketchGalleryLauncher.launch(
-                                "image/*"
-                            )
-                        },
-
-                        /*
-                         * URI returned from Android picker.
-                         */
-                        pendingImageUri =
-                            pendingSketchImageUri,
-
-                        /*
-                         * DrawingCanvas has consumed the URI.
-                         */
-                        onPendingImageConsumed = {
-                            pendingSketchImageUri = null
                         }
                     )
 
                     /*
-                     * Small text field below the sketch page.
+                     * -------------------------------------------------
+                     * SKETCH DESCRIPTION
+                     * -------------------------------------------------
                      */
+
                     TextField(
+
                         value = content,
+
                         onValueChange = {
                             content = it
                         },
+
                         placeholder = {
+
                             Text(
                                 "Çizim hakkında not...",
                                 style =
                                     MaterialTheme.typography.bodyMedium
                             )
                         },
+
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
+
                         colors =
                             TextFieldDefaults.colors(
+
                                 focusedContainerColor =
                                     Color.Transparent,
+
                                 unfocusedContainerColor =
                                     Color.Transparent
                             )
@@ -775,12 +950,16 @@ fun NoteEditorScreen(
                 ) {
 
                     /*
-                     * ------------------------------------------------
+                     * =================================================
                      * CHECKLIST
-                     * ------------------------------------------------
+                     * =================================================
                      */
+
                     ChecklistEditor(
-                        items = checklistItems,
+
+                        items =
+                            checklistItems,
+
                         onItemsChanged = {
                             checklistItems = it
                         }
@@ -789,15 +968,24 @@ fun NoteEditorScreen(
                 } else {
 
                     /*
-                     * ------------------------------------------------
-                     * NORMAL NOTE IMAGES
-                     * ------------------------------------------------
+                     * =================================================
+                     * NORMAL NOTE
+                     * =================================================
                      */
+
+                    /*
+                     * -------------------------------------------------
+                     * IMAGES
+                     * -------------------------------------------------
+                     */
+
                     if (imageUris.isNotEmpty()) {
 
                         LazyRow(
+
                             modifier =
                                 Modifier.padding(16.dp),
+
                             horizontalArrangement =
                                 Arrangement.spacedBy(8.dp)
                         ) {
@@ -807,9 +995,12 @@ fun NoteEditorScreen(
                                 Box {
 
                                     AsyncImage(
+
                                         model = uri,
+
                                         contentDescription =
                                             null,
+
                                         modifier =
                                             Modifier
                                                 .size(120.dp)
@@ -818,15 +1009,23 @@ fun NoteEditorScreen(
                                                         8.dp
                                                     )
                                                 ),
+
                                         contentScale =
                                             ContentScale.Crop
                                     )
 
+                                    /*
+                                     * DELETE IMAGE
+                                     */
+
                                     IconButton(
+
                                         onClick = {
+
                                             imageUris =
                                                 imageUris - uri
                                         },
+
                                         modifier =
                                             Modifier
                                                 .align(
@@ -842,11 +1041,15 @@ fun NoteEditorScreen(
                                     ) {
 
                                         Icon(
+
                                             Icons.Default.Close,
+
                                             contentDescription =
                                                 null,
+
                                             tint =
                                                 Color.White,
+
                                             modifier =
                                                 Modifier.size(16.dp)
                                         )
@@ -857,38 +1060,50 @@ fun NoteEditorScreen(
                     }
 
                     /*
-                     * ------------------------------------------------
+                     * -------------------------------------------------
                      * NORMAL TEXT
-                     * ------------------------------------------------
+                     * -------------------------------------------------
                      */
+
                     TextField(
+
                         value = content,
+
                         onValueChange = {
                             content = it
                         },
+
                         placeholder = {
+
                             Text(
                                 "Notunuzu yazın...",
                                 style =
                                     MaterialTheme.typography.bodyLarge
                             )
                         },
+
                         modifier =
                             Modifier
                                 .fillMaxSize()
                                 .weight(1f)
                                 .padding(16.dp),
+
                         colors =
                             TextFieldDefaults.colors(
+
                                 focusedContainerColor =
                                     Color.Transparent,
+
                                 unfocusedContainerColor =
                                     Color.Transparent,
+
                                 focusedIndicatorColor =
                                     Color.Transparent,
+
                                 unfocusedIndicatorColor =
                                     Color.Transparent
                             ),
+
                         textStyle =
                             MaterialTheme.typography.bodyLarge
                     )
@@ -897,11 +1112,13 @@ fun NoteEditorScreen(
             } else {
 
                 /*
-                 * =================================================
+                 * =====================================================
                  * PREVIEW MODE
-                 * =================================================
+                 * =====================================================
                  */
+
                 Column(
+
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -910,6 +1127,10 @@ fun NoteEditorScreen(
                             )
                             .padding(16.dp)
                 ) {
+
+                    /*
+                     * DISPLAY TITLE
+                     */
 
                     val displayTitle =
                         if (
@@ -929,13 +1150,17 @@ fun NoteEditorScreen(
                             "Başlıksız Not"
 
                         } else {
+
                             title
                         }
 
                     Text(
+
                         displayTitle,
+
                         style =
                             MaterialTheme.typography.headlineSmall,
+
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -945,25 +1170,36 @@ fun NoteEditorScreen(
                             Modifier.height(16.dp)
                     )
 
+                    /*
+                     * CHECKLIST PREVIEW
+                     */
+
                     if (checklistItems.isNotEmpty()) {
 
                         checklistItems.forEach { item ->
 
                             Row(
+
                                 verticalAlignment =
                                     Alignment.CenterVertically
                             ) {
 
                                 Checkbox(
+
                                     checked =
                                         item.isChecked,
+
                                     onCheckedChange =
                                         null,
-                                    enabled = false
+
+                                    enabled =
+                                        false
                                 )
 
                                 Text(
+
                                     item.text,
+
                                     style =
                                         if (item.isChecked) {
 
@@ -972,7 +1208,9 @@ fun NoteEditorScreen(
                                                 .bodyLarge
                                                 .copy(
                                                     textDecoration =
-                                                        androidx.compose.ui
+                                                        androidx
+                                                            .compose
+                                                            .ui
                                                             .text
                                                             .style
                                                             .TextDecoration
@@ -991,12 +1229,22 @@ fun NoteEditorScreen(
 
                     } else {
 
+                        /*
+                         * NORMAL TEXT PREVIEW
+                         */
+
                         Text(
+
                             content,
+
                             style =
                                 MaterialTheme.typography.bodyLarge
                         )
                     }
+
+                    /*
+                     * SKETCH INFORMATION
+                     */
 
                     if (
                         sketchData?.isNotEmpty() == true
@@ -1008,18 +1256,30 @@ fun NoteEditorScreen(
                         )
 
                         Text(
+
                             "Çizim içeriyor. Düzenlemek için Sketch moduna geçin.",
+
                             style =
                                 MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+
+                            color =
+                                Color.Gray
                         )
                     }
+
+                    /*
+                     * NORMAL NOTE IMAGES
+                     */
 
                     imageUris.forEach { uri ->
 
                         AsyncImage(
+
                             model = uri,
-                            contentDescription = null,
+
+                            contentDescription =
+                                null,
+
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
@@ -1031,6 +1291,7 @@ fun NoteEditorScreen(
                                             8.dp
                                         )
                                     ),
+
                             contentScale =
                                 ContentScale.FillWidth
                         )
@@ -1045,6 +1306,7 @@ fun NoteEditorScreen(
      * DELETE NOTE DIALOG
      * ============================================================
      */
+
     if (
         showDeleteDialog &&
         note != null
@@ -1053,14 +1315,18 @@ fun NoteEditorScreen(
         AlertDialog(
 
             onDismissRequest = {
-                showDeleteDialog = false
+
+                showDeleteDialog =
+                    false
             },
 
             title = {
+
                 Text("Notu Sil")
             },
 
             text = {
+
                 Text(
                     "Bu notu silmek istediğinize emin misiniz?"
                 )
@@ -1069,11 +1335,13 @@ fun NoteEditorScreen(
             confirmButton = {
 
                 TextButton(
+
                     onClick = {
 
                         onDelete(note)
 
-                        showDeleteDialog = false
+                        showDeleteDialog =
+                            false
                     }
                 ) {
 
@@ -1088,10 +1356,14 @@ fun NoteEditorScreen(
             dismissButton = {
 
                 TextButton(
+
                     onClick = {
-                        showDeleteDialog = false
+
+                        showDeleteDialog =
+                            false
                     }
                 ) {
+
                     Text("Vazgeç")
                 }
             }
