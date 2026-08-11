@@ -1,5 +1,8 @@
 package com.eldora25.tayfnotes.ui.components
 
+import android.graphics.Color as AndroidColor
+import android.view.MotionEvent
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
@@ -7,7 +10,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,17 +23,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -47,8 +52,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 
 // =============================================================
@@ -66,10 +74,6 @@ enum class ToolType {
 }
 
 
-// =============================================================
-// SHAPE TYPES
-// =============================================================
-
 enum class ShapeType {
     RECTANGLE,
     CIRCLE,
@@ -80,20 +84,31 @@ enum class ShapeType {
 
 
 // =============================================================
-// DRAWING POINT
+// POINT
 // =============================================================
 //
-// pressure:
-// 0.0f - 1.0f
+// Yeni alanlar:
 //
-// Eski kayıtlarla uyumluluk için default = 1f.
+// pressure    -> 0..1 stylus pressure
+// tilt        -> 0..PI/2
+// orientation -> stylus orientation
+// isStylus    -> gerçek stylus mu?
+//
+// Eski kayıtlarla uyumluluk için default değerler vardır.
 // =============================================================
 
 @Serializable
 data class Point(
     val x: Float,
     val y: Float,
-    val pressure: Float = 1f
+
+    val pressure: Float = 1f,
+
+    val tilt: Float = 0f,
+
+    val orientation: Float = 0f,
+
+    val isStylus: Boolean = false
 )
 
 
@@ -104,12 +119,19 @@ data class Point(
 @Serializable
 data class DrawPath(
     val points: List<Point>,
+
     val colorHex: String,
+
     val strokeWidth: Float,
+
     val toolType: ToolType = ToolType.PEN,
+
     val shapeType: ShapeType? = null,
+
     val isFilled: Boolean = false,
+
     val fillColorHex: String? = null,
+
     val opacity: Float = 1f
 )
 
@@ -122,8 +144,10 @@ data class DrawPath(
 data class SketchImage(
     val id: String,
     val uri: String,
+
     val x: Float,
     val y: Float,
+
     val width: Float,
     val height: Float
 )
@@ -158,46 +182,53 @@ private fun defaultToolSettings(): Map<ToolType, ToolSettings> {
 
     return mapOf(
 
-        ToolType.PEN to ToolSettings(
-            size = 4f,
-            opacity = 1f
-        ),
+        ToolType.PEN to
+            ToolSettings(
+                size = 4f,
+                opacity = 1f
+            ),
 
-        ToolType.PENCIL to ToolSettings(
-            size = 3f,
-            opacity = 0.75f
-        ),
+        ToolType.PENCIL to
+            ToolSettings(
+                size = 3f,
+                opacity = 0.78f
+            ),
 
-        ToolType.INK to ToolSettings(
-            size = 5f,
-            opacity = 1f
-        ),
+        ToolType.INK to
+            ToolSettings(
+                size = 4f,
+                opacity = 1f
+            ),
 
-        ToolType.BRUSH to ToolSettings(
-            size = 12f,
-            opacity = 0.70f
-        ),
+        ToolType.BRUSH to
+            ToolSettings(
+                size = 12f,
+                opacity = 0.72f
+            ),
 
-        ToolType.MARKER to ToolSettings(
-            size = 20f,
-            opacity = 0.45f
-        ),
+        ToolType.MARKER to
+            ToolSettings(
+                size = 20f,
+                opacity = 0.45f
+            ),
 
-        ToolType.ERASER to ToolSettings(
-            size = 30f,
-            opacity = 1f
-        ),
+        ToolType.ERASER to
+            ToolSettings(
+                size = 30f,
+                opacity = 1f
+            ),
 
-        ToolType.SHAPE to ToolSettings(
-            size = 4f,
-            opacity = 1f
-        )
+        ToolType.SHAPE to
+            ToolSettings(
+                size = 4f,
+                opacity = 1f
+            )
     )
 }
 
 
 // =============================================================
-// TOOL NAME
+// DISPLAY NAME
 // =============================================================
 
 private fun toolDisplayName(
@@ -206,19 +237,26 @@ private fun toolDisplayName(
 
     return when (tool) {
 
-        ToolType.PEN -> "Kalem"
+        ToolType.PEN ->
+            "Kalem"
 
-        ToolType.PENCIL -> "Kurşun Kalem"
+        ToolType.PENCIL ->
+            "Kurşun Kalem"
 
-        ToolType.INK -> "Mürekkep"
+        ToolType.INK ->
+            "Mürekkep"
 
-        ToolType.BRUSH -> "Fırça"
+        ToolType.BRUSH ->
+            "Fırça"
 
-        ToolType.MARKER -> "Marker"
+        ToolType.MARKER ->
+            "Marker"
 
-        ToolType.ERASER -> "Silgi"
+        ToolType.ERASER ->
+            "Silgi"
 
-        ToolType.SHAPE -> "Şekil"
+        ToolType.SHAPE ->
+            "Şekil"
     }
 }
 
@@ -237,10 +275,16 @@ private fun toolSizeRange(
             5f..100f
 
         ToolType.MARKER ->
-            2f..60f
+            2f..80f
 
         ToolType.BRUSH ->
-            2f..60f
+            2f..70f
+
+        ToolType.PENCIL ->
+            1f..20f
+
+        ToolType.INK ->
+            1f..30f
 
         else ->
             1f..40f
@@ -262,9 +306,261 @@ private fun Color.toHex(): String {
 
 
 // =============================================================
+// HEX -> COLOR
+// =============================================================
+
+private fun colorFromHex(
+    value: String
+): Color {
+
+    return try {
+
+        Color(
+            AndroidColor.parseColor(value)
+        )
+
+    } catch (_: Exception) {
+
+        Color.Black
+    }
+}
+
+
+// =============================================================
+// PRESSURE NORMALIZATION
+// =============================================================
+//
+// Bazı digitizer'lar 0..1 dışında değer verebilir.
+// Android dokümantasyonuna göre pressure değerinin
+// normalize edilmesi gerekir.
+// =============================================================
+
+private fun normalizePressure(
+    pressure: Float
+): Float {
+
+    if (!pressure.isFinite()) {
+        return 1f
+    }
+
+    return pressure.coerceIn(
+        0.02f,
+        1f
+    )
+}
+
+
+// =============================================================
+// INK PRESSURE CURVE
+// =============================================================
+//
+// Hafif basınç:
+// ince
+//
+// Orta basınç:
+// kontrollü kalınlık
+//
+// Güçlü basınç:
+// daha kalın
+//
+// Smooth-step benzeri eğri kullanılıyor.
+// =============================================================
+
+private fun inkPressureCurve(
+    pressure: Float
+): Float {
+
+    val p =
+        normalizePressure(
+            pressure
+        )
+
+    val curved =
+        p * p * (3f - 2f * p)
+
+    return 0.28f + curved * 1.15f
+}
+
+
+// =============================================================
+// PENCIL PRESSURE
+// =============================================================
+
+private fun pencilPressure(
+    pressure: Float
+): Float {
+
+    val p =
+        normalizePressure(
+            pressure
+        )
+
+    return 0.55f + p * 0.65f
+}
+
+
+// =============================================================
+// BRUSH PRESSURE
+// =============================================================
+
+private fun brushPressure(
+    pressure: Float
+): Float {
+
+    val p =
+        normalizePressure(
+            pressure
+        )
+
+    return 0.35f + p * 1.25f
+}
+
+
+// =============================================================
+// TILT FACTOR
+// =============================================================
+//
+// tilt:
+//
+// 0 rad    = dik
+// PI/2     = yüzeye yakın
+//
+// Fırça ve marker daha geniş olur.
+// =============================================================
+
+private fun tiltFactor(
+    tilt: Float
+): Float {
+
+    val normalized =
+        (tilt / (Math.PI.toFloat() / 2f))
+            .coerceIn(
+                0f,
+                1f
+            )
+
+    return 1f + normalized * 1.75f
+}
+
+
+// =============================================================
+// DETERMINISTIC GRAIN NOISE
+// =============================================================
+//
+// Gerçek random kullanmıyoruz.
+//
+// Böylece çizim her redraw olduğunda
+// aynı texture korunur.
+// =============================================================
+
+private fun grainNoise(
+    value: Int
+): Float {
+
+    var x =
+        value * 0x45d9f3b
+
+    x =
+        (x xor (x shr 16)) *
+                0x45d9f3b
+
+    x =
+        (x xor (x shr 16)) *
+                0x45d9f3b
+
+    x =
+        x xor (x shr 16)
+
+    return (
+        (x and 0x7fffffff) /
+            2147483647f
+        )
+}
+
+
+// =============================================================
+// BUILD PATH
+// =============================================================
+
+private fun buildPath(
+    points: List<Point>,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f
+): Path {
+
+    val path =
+        Path()
+
+    if (points.isEmpty()) {
+        return path
+    }
+
+    path.moveTo(
+        points.first().x + offsetX,
+        points.first().y + offsetY
+    )
+
+    if (points.size == 1) {
+
+        path.lineTo(
+            points.first().x + 0.01f + offsetX,
+            points.first().y + 0.01f + offsetY
+        )
+
+        return path
+    }
+
+    for (
+        i in 1 until points.size
+    ) {
+
+        val previous =
+            points[i - 1]
+
+        val current =
+            points[i]
+
+        val midpoint =
+            Offset(
+
+                (
+                    previous.x +
+                        current.x
+                    ) / 2f + offsetX,
+
+                (
+                    previous.y +
+                        current.y
+                    ) / 2f + offsetY
+            )
+
+        path.quadraticTo(
+
+            previous.x + offsetX,
+            previous.y + offsetY,
+
+            midpoint.x,
+            midpoint.y
+        )
+    }
+
+    val last =
+        points.last()
+
+    path.lineTo(
+        last.x + offsetX,
+        last.y + offsetY
+    )
+
+    return path
+}
+
+
+// =============================================================
 // DRAWING CANVAS
 // =============================================================
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun DrawingCanvas(
     modifier: Modifier = Modifier,
@@ -272,8 +568,9 @@ fun DrawingCanvas(
     onDataChanged: (String) -> Unit
 ) {
 
+
     // =========================================================
-    // INITIAL DATA
+    // DECODE
     // =========================================================
 
     fun decodeInitialData(
@@ -314,7 +611,9 @@ fun DrawingCanvas(
     var document by remember {
 
         mutableStateOf(
-            decodeInitialData(initialData)
+            decodeInitialData(
+                initialData
+            )
         )
     }
 
@@ -339,7 +638,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // CURRENT TOOL
+    // TOOL
     // =========================================================
 
     var currentTool by remember {
@@ -351,7 +650,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // CURRENT SHAPE
+    // SHAPE
     // =========================================================
 
     var currentShape by remember {
@@ -363,7 +662,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // TOOL SETTINGS
+    // SETTINGS
     // =========================================================
 
     var toolSettings by remember {
@@ -375,7 +674,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // CURRENT COLOR
+    // COLOR
     // =========================================================
 
     var currentColor by remember {
@@ -404,7 +703,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // EXPANDED TOOL
+    // MENUS
     // =========================================================
 
     var expandedTool by remember {
@@ -414,11 +713,6 @@ fun DrawingCanvas(
         )
     }
 
-
-    // =========================================================
-    // COLOR MENU
-    // =========================================================
-
     var colorMenuExpanded by remember {
 
         mutableStateOf(false)
@@ -426,7 +720,7 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // CURRENT PATH
+    // CURRENT STROKE
     // =========================================================
 
     val currentPathPoints =
@@ -449,6 +743,31 @@ fun DrawingCanvas(
 
 
     // =========================================================
+    // STYLUS STATE
+    // =========================================================
+
+    var activePointerId by remember {
+
+        mutableStateOf(
+            -1
+        )
+    }
+
+    var drawingActive by remember {
+
+        mutableStateOf(
+            false
+        )
+    }
+
+    var multiTouchDetected by remember {
+
+        mutableStateOf(
+            false
+        )
+
+
+    // =========================================================
     // IMAGE PICKER
     // =========================================================
 
@@ -466,35 +785,31 @@ fun DrawingCanvas(
                 return@rememberLauncherForActivityResult
             }
 
-
             val imageWidth =
                 (
-                    canvasSize.width * 0.45f
-                ).coerceIn(
-                    240f,
-                    650f
-                )
-
+                    canvasSize.width *
+                        0.45f
+                    ).coerceIn(
+                        240f,
+                        650f
+                    )
 
             val imageHeight =
                 imageWidth * 0.65f
-
 
             val imageX =
                 (
                     canvasSize.width -
                         imageWidth
-                ) / 2f
-
+                    ) / 2f
 
             val imageY =
                 (
                     canvasSize.height -
                         imageHeight
-                ) / 2f
+                    ) / 2f
 
-
-            val newImage =
+            val image =
                 SketchImage(
 
                     id =
@@ -517,21 +832,18 @@ fun DrawingCanvas(
                         imageHeight
                 )
 
-
             undoStack =
                 undoStack + document
 
             redoStack =
                 emptyList()
 
-
             document =
                 document.copy(
                     images =
                         document.images +
-                            newImage
+                            image
                 )
-
 
             onDataChanged(
                 Json.encodeToString(
@@ -576,17 +888,21 @@ fun DrawingCanvas(
 
 
     // =========================================================
-    // SELECT TOOL
+    // TOOL SELECT
     // =========================================================
 
     fun selectTool(
         tool: ToolType
     ) {
 
-        if (currentTool == tool) {
+        if (
+            currentTool == tool
+        ) {
 
             expandedTool =
-                if (expandedTool == tool) {
+                if (
+                    expandedTool == tool
+                ) {
 
                     null
 
@@ -604,7 +920,6 @@ fun DrawingCanvas(
                 null
         }
 
-
         colorMenuExpanded =
             false
     }
@@ -616,35 +931,28 @@ fun DrawingCanvas(
 
     fun performUndo() {
 
-        if (undoStack.isEmpty()) {
+        if (
+            undoStack.isEmpty()
+        ) {
             return
         }
-
 
         val previous =
             undoStack.last()
 
-
         redoStack =
             redoStack + document
-
 
         undoStack =
             undoStack.dropLast(1)
 
-
         document =
             previous
-
 
         currentPathPoints.clear()
 
         expandedTool =
             null
-
-        colorMenuExpanded =
-            false
-
 
         saveCurrentState()
     }
@@ -656,35 +964,28 @@ fun DrawingCanvas(
 
     fun performRedo() {
 
-        if (redoStack.isEmpty()) {
+        if (
+            redoStack.isEmpty()
+        ) {
             return
         }
-
 
         val next =
             redoStack.last()
 
-
         undoStack =
             undoStack + document
-
 
         redoStack =
             redoStack.dropLast(1)
 
-
         document =
             next
-
 
         currentPathPoints.clear()
 
         expandedTool =
             null
-
-        colorMenuExpanded =
-            false
-
 
         saveCurrentState()
     }
@@ -703,29 +1004,245 @@ fun DrawingCanvas(
             return
         }
 
-
         undoStack =
             undoStack + document
-
 
         redoStack =
             emptyList()
 
-
         document =
             SketchDocument()
-
 
         currentPathPoints.clear()
 
         expandedTool =
             null
 
-        colorMenuExpanded =
+        saveCurrentState()
+    }
+
+
+    // =========================================================
+    // FINALIZE STROKE
+    // =========================================================
+
+    fun finalizeStroke() {
+
+        if (
+            !drawingActive
+        ) {
+            return
+        }
+
+        if (
+            currentPathPoints.isEmpty()
+        ) {
+            drawingActive =
+                false
+
+            return
+        }
+
+        val settings =
+            toolSettings[
+                currentTool
+            ] ?: ToolSettings(
+                4f,
+                1f
+            )
+
+        val newPath =
+            DrawPath(
+
+                points =
+                    currentPathPoints.toList(),
+
+                colorHex =
+                    currentColor.toHex(),
+
+                strokeWidth =
+                    settings.size,
+
+                toolType =
+                    currentTool,
+
+                shapeType =
+                    if (
+                        currentTool ==
+                        ToolType.SHAPE
+                    ) {
+
+                        currentShape
+
+                    } else {
+
+                        null
+                    },
+
+                isFilled =
+                    isFillEnabled,
+
+                fillColorHex =
+                    if (
+                        isFillEnabled
+                    ) {
+
+                        currentFillColor.toHex()
+
+                    } else {
+
+                        null
+                    },
+
+                opacity =
+                    settings.opacity
+            )
+
+        undoStack =
+            undoStack + document
+
+        redoStack =
+            emptyList()
+
+        document =
+            document.copy(
+                paths =
+                    document.paths +
+                        newPath
+            )
+
+        currentPathPoints.clear()
+
+        drawingActive =
             false
 
+        activePointerId =
+            -1
+
+        multiTouchDetected =
+            false
 
         saveCurrentState()
+    }
+
+
+    // =========================================================
+    // CANCEL STROKE
+    // =========================================================
+
+    fun cancelStroke() {
+
+        currentPathPoints.clear()
+
+        drawingActive =
+            false
+
+        activePointerId =
+            -1
+
+        multiTouchDetected =
+            false
+    }
+
+
+    // =========================================================
+    // START POINT
+    // =========================================================
+
+    fun addPointFromEvent(
+        event: MotionEvent,
+        pointerIndex: Int
+    ) {
+
+        if (
+            pointerIndex < 0 ||
+            pointerIndex >= event.pointerCount
+        ) {
+            return
+        }
+
+        val tool =
+            event.getToolType(
+                pointerIndex
+            )
+
+        val isStylus =
+            tool ==
+                MotionEvent.TOOL_TYPE_STYLUS ||
+                tool ==
+                MotionEvent.TOOL_TYPE_ERASER
+
+        val pressure =
+            if (isStylus) {
+
+                normalizePressure(
+                    event.getAxisValue(
+                        MotionEvent.AXIS_PRESSURE,
+                        pointerIndex
+                    )
+                )
+
+            } else {
+
+                1f
+            }
+
+        val tilt =
+            if (isStylus) {
+
+                event.getAxisValue(
+                    MotionEvent.AXIS_TILT,
+                    pointerIndex
+                ).coerceIn(
+                    0f,
+                    Math.PI.toFloat() / 2f
+                )
+
+            } else {
+
+                0f
+            }
+
+        val orientation =
+            if (isStylus) {
+
+                event.getAxisValue(
+                    MotionEvent.AXIS_ORIENTATION,
+                    pointerIndex
+                )
+
+            } else {
+
+                0f
+            }
+
+        currentPathPoints.add(
+
+            Point(
+
+                x =
+                    event.getX(
+                        pointerIndex
+                    ),
+
+                y =
+                    event.getY(
+                        pointerIndex
+                    ),
+
+                pressure =
+                    pressure,
+
+                tilt =
+                    tilt,
+
+                orientation =
+                    orientation,
+
+                isStylus =
+                    isStylus
+            )
+        )
     }
 
 
@@ -738,7 +1255,10 @@ fun DrawingCanvas(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .clipToBounds()
+                .background(
+                    Color.White
+                )
     ) {
 
 
@@ -750,8 +1270,7 @@ fun DrawingCanvas(
 
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(),
+                    .fillMaxWidth(),
 
             shape =
                 RoundedCornerShape(
@@ -769,7 +1288,6 @@ fun DrawingCanvas(
             tonalElevation =
                 4.dp
         ) {
-
 
             Row(
 
@@ -798,9 +1316,8 @@ fun DrawingCanvas(
                     enabled =
                         undoStack.isNotEmpty(),
 
-                    onClick = {
-                        performUndo()
-                    }
+                    onClick =
+                        ::performUndo
                 ) {
 
                     Icon(
@@ -822,9 +1339,8 @@ fun DrawingCanvas(
                     enabled =
                         redoStack.isNotEmpty(),
 
-                    onClick = {
-                        performRedo()
-                    }
+                    onClick =
+                        ::performRedo
                 ) {
 
                     Icon(
@@ -867,10 +1383,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.PENCIL
-                        ] ?: ToolSettings(
-                            3f,
-                            0.75f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -918,10 +1431,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.PEN
-                        ] ?: ToolSettings(
-                            4f,
-                            1f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -969,10 +1479,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.INK
-                        ] ?: ToolSettings(
-                            5f,
-                            1f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -1020,10 +1527,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.BRUSH
-                        ] ?: ToolSettings(
-                            12f,
-                            0.70f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -1071,10 +1575,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.MARKER
-                        ] ?: ToolSettings(
-                            20f,
-                            0.45f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -1126,7 +1627,7 @@ fun DrawingCanvas(
                                     ToolType.SHAPE
 
                                 expandedTool =
-                                    ToolType.SHAPE
+                                    null
                             }
 
                             colorMenuExpanded =
@@ -1172,150 +1673,89 @@ fun DrawingCanvas(
                         }
                     ) {
 
-                        DropdownMenuItem(
+                        ShapeMenuItem(
+                            "Dikdörtgen",
+                            Icons.Default.Rectangle
+                        ) {
 
-                            text = {
-                                Text("Dikdörtgen")
-                            },
+                            currentShape =
+                                ShapeType.RECTANGLE
 
-                            onClick = {
+                            currentTool =
+                                ToolType.SHAPE
 
-                                currentShape =
-                                    ShapeType.RECTANGLE
+                            expandedTool =
+                                null
+                        }
 
-                                currentTool =
-                                    ToolType.SHAPE
+                        ShapeMenuItem(
+                            "Daire",
+                            Icons.Default.Circle
+                        ) {
 
-                                expandedTool =
-                                    null
-                            },
+                            currentShape =
+                                ShapeType.CIRCLE
 
-                            leadingIcon = {
+                            currentTool =
+                                ToolType.SHAPE
 
-                                Icon(
-                                    Icons.Default.Rectangle,
-                                    null
-                                )
-                            }
-                        )
+                            expandedTool =
+                                null
+                        }
 
+                        ShapeMenuItem(
+                            "Üçgen",
+                            Icons.Default.ChangeHistory
+                        ) {
 
-                        DropdownMenuItem(
+                            currentShape =
+                                ShapeType.TRIANGLE
 
-                            text = {
-                                Text("Daire")
-                            },
+                            currentTool =
+                                ToolType.SHAPE
 
-                            onClick = {
+                            expandedTool =
+                                null
+                        }
 
-                                currentShape =
-                                    ShapeType.CIRCLE
+                        ShapeMenuItem(
+                            "Elips",
+                            Icons.Default.FilterTiltShift
+                        ) {
 
-                                currentTool =
-                                    ToolType.SHAPE
+                            currentShape =
+                                ShapeType.ELLIPSE
 
-                                expandedTool =
-                                    null
-                            },
+                            currentTool =
+                                ToolType.SHAPE
 
-                            leadingIcon = {
+                            expandedTool =
+                                null
+                        }
 
-                                Icon(
-                                    Icons.Default.Circle,
-                                    null
-                                )
-                            }
-                        )
+                        ShapeMenuItem(
+                            "Yay",
+                            Icons.Default.Architecture
+                        ) {
 
+                            currentShape =
+                                ShapeType.ARC
 
-                        DropdownMenuItem(
+                            currentTool =
+                                ToolType.SHAPE
 
-                            text = {
-                                Text("Üçgen")
-                            },
-
-                            onClick = {
-
-                                currentShape =
-                                    ShapeType.TRIANGLE
-
-                                currentTool =
-                                    ToolType.SHAPE
-
-                                expandedTool =
-                                    null
-                            },
-
-                            leadingIcon = {
-
-                                Icon(
-                                    Icons.Default.ChangeHistory,
-                                    null
-                                )
-                            }
-                        )
-
-
-                        DropdownMenuItem(
-
-                            text = {
-                                Text("Elips")
-                            },
-
-                            onClick = {
-
-                                currentShape =
-                                    ShapeType.ELLIPSE
-
-                                currentTool =
-                                    ToolType.SHAPE
-
-                                expandedTool =
-                                    null
-                            },
-
-                            leadingIcon = {
-
-                                Icon(
-                                    Icons.Default.FilterTiltShift,
-                                    null
-                                )
-                            }
-                        )
-
-
-                        DropdownMenuItem(
-
-                            text = {
-                                Text("Yay")
-                            },
-
-                            onClick = {
-
-                                currentShape =
-                                    ShapeType.ARC
-
-                                currentTool =
-                                    ToolType.SHAPE
-
-                                expandedTool =
-                                    null
-                            },
-
-                            leadingIcon = {
-
-                                Icon(
-                                    Icons.Default.Architecture,
-                                    null
-                                )
-                            }
-                        )
+                            expandedTool =
+                                null
+                        }
                     }
                 }
 
 
                 // =================================================
                 // COLOR PALETTE
+                // =================================================
+                //
+                // Daire yerine tekrar Palette ikonu.
                 // =================================================
 
                 Box {
@@ -1332,19 +1772,26 @@ fun DrawingCanvas(
                         }
                     ) {
 
-                        /*
-                         * DAİRE YERİNE PALET İKONU
-                         */
                         Icon(
 
-                            imageVector =
-                                Icons.Default.Palette,
+                            Icons.Default.Palette,
 
                             contentDescription =
-                                "Renk paleti",
+                                "Renk Paleti",
 
                             tint =
-                                currentColor
+                                if (
+                                    colorMenuExpanded
+                                ) {
+
+                                    MaterialTheme
+                                        .colorScheme
+                                        .primary
+
+                                } else {
+
+                                    LocalContentColor.current
+                                }
                         )
                     }
 
@@ -1400,7 +1847,7 @@ fun DrawingCanvas(
                         Icons.Default.Image,
 
                         contentDescription =
-                            "Resim ekle"
+                            "Resim"
                     )
                 }
 
@@ -1435,10 +1882,7 @@ fun DrawingCanvas(
                     settings =
                         toolSettings[
                             ToolType.ERASER
-                        ] ?: ToolSettings(
-                            30f,
-                            1f
-                        ),
+                        ]!!,
 
                     onSettingsChanged = {
 
@@ -1465,10 +1909,8 @@ fun DrawingCanvas(
 
                 IconButton(
 
-                    onClick = {
-
-                        clearCanvas()
-                    }
+                    onClick =
+                        ::clearCanvas
                 ) {
 
                     Icon(
@@ -1476,7 +1918,7 @@ fun DrawingCanvas(
                         Icons.Default.DeleteSweep,
 
                         contentDescription =
-                            "Sayfayı temizle"
+                            "Temizle"
                     )
                 }
             }
@@ -1493,8 +1935,10 @@ fun DrawingCanvas(
                 Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(Color.White)
-                    .padding(4.dp)
+                    .clipToBounds()
+                    .background(
+                        Color.White
+                    )
                     .onSizeChanged {
 
                         canvasSize =
@@ -1507,12 +1951,11 @@ fun DrawingCanvas(
             // IMAGES
             // =====================================================
 
+            val density =
+                androidx.compose.ui.platform
+                    .LocalDensity.current
+
             document.images.forEach { image ->
-
-                val density =
-                    androidx.compose.ui.platform
-                        .LocalDensity.current
-
 
                 AsyncImage(
 
@@ -1559,245 +2002,315 @@ fun DrawingCanvas(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .pointerInput(
+                        .clipToBounds()
 
-                            currentTool,
-                            currentShape,
-                            currentColor,
-                            toolSettings,
-                            isFillEnabled,
-                            currentFillColor
-                        ) {
+                        // -------------------------------------------------
+                        // IMPORTANT:
+                        //
+                        // Compose -> Android MotionEvent
+                        //
+                        // Pressure / tilt / orientation burada okunuyor.
+                        // -------------------------------------------------
 
-                            detectDragGestures(
+                        .pointerInteropFilter { event ->
 
-                                // =================================
-                                // START
-                                // =================================
+                            when (
+                                event.actionMasked
+                            ) {
 
-                                onDragStart = { offset ->
+
+                                // =========================================
+                                // DOWN
+                                // =========================================
+
+                                MotionEvent.ACTION_DOWN -> {
+
+                                    activePointerId =
+                                        event.getPointerId(
+                                            event.actionIndex
+                                        )
+
+                                    multiTouchDetected =
+                                        false
 
                                     currentPathPoints.clear()
 
-                                    currentPathPoints.add(
+                                    drawingActive =
+                                        true
 
-                                        Point(
+                                    addPointFromEvent(
 
-                                            x =
-                                                offset.x,
+                                        event,
 
-                                            y =
-                                                offset.y,
-
-                                            pressure =
-                                                1f
-                                        )
+                                        event.actionIndex
                                     )
-                                },
+
+                                    true
+                                }
 
 
-                                // =================================
-                                // DRAG
-                                // =================================
+                                // =========================================
+                                // SECOND FINGER / POINTER
+                                // =========================================
 
-                                onDrag = {
-                                    change,
-                                    _ ->
+                                MotionEvent.ACTION_POINTER_DOWN -> {
 
-                                    val pressure =
-                                        if (
-                                            change.type ==
-                                            PointerType.Stylus
-                                        ) {
+                                    multiTouchDetected =
+                                        true
 
-                                            change.pressure
-                                                .coerceIn(
-                                                    0.05f,
-                                                    1f
-                                                )
+                                    // İki parmak başladığında
+                                    // çizimi iptal ediyoruz.
+                                    //
+                                    // Böylece ileride pan/zoom sistemi
+                                    // bu alanı kullanabilir.
 
-                                        } else {
+                                    cancelStroke()
 
-                                            /*
-                                             * Parmak için sabit
-                                             * maksimum basınç.
-                                             */
-                                            1f
-                                        }
+                                    true
+                                }
 
+
+                                // =========================================
+                                // MOVE
+                                // =========================================
+
+                                MotionEvent.ACTION_MOVE -> {
 
                                     if (
-                                        currentTool ==
-                                        ToolType.SHAPE
+                                        multiTouchDetected
+                                    ) {
+                                        return@pointerInteropFilter true
+                                    }
+
+                                    if (
+                                        !drawingActive
+                                    ) {
+                                        return@pointerInteropFilter true
+                                    }
+
+                                    val index =
+                                        event.findPointerIndex(
+                                            activePointerId
+                                        )
+
+                                    if (
+                                        index < 0
+                                    ) {
+                                        return@pointerInteropFilter true
+                                    }
+
+
+                                    // -------------------------------------
+                                    // HISTORICAL EVENTS
+                                    // -------------------------------------
+                                    //
+                                    // Android input batching yapabilir.
+                                    // Historical points çizgiyi daha
+                                    // pürüzsüz yapar.
+                                    // -------------------------------------
+
+                                    val historySize =
+                                        event.historySize
+
+                                    for (
+                                        h in 0 until historySize
                                     ) {
 
-                                        if (
-                                            currentPathPoints.size >
-                                            1
-                                        ) {
+                                        val tool =
+                                            event.getToolType(
+                                                index
+                                            )
 
-                                            currentPathPoints
-                                                .removeAt(
-                                                    1
+                                        val isStylus =
+                                            tool ==
+                                                MotionEvent.TOOL_TYPE_STYLUS ||
+                                                tool ==
+                                                MotionEvent.TOOL_TYPE_ERASER
+
+                                        val pressure =
+                                            if (
+                                                isStylus
+                                            ) {
+
+                                                normalizePressure(
+                                                    event.getHistoricalPressure(
+                                                        index,
+                                                        h
+                                                    )
                                                 )
-                                        }
 
+                                            } else {
+
+                                                1f
+                                            }
+
+                                        val tilt =
+                                            if (
+                                                isStylus
+                                            ) {
+
+                                                event.getHistoricalAxisValue(
+                                                    MotionEvent.AXIS_TILT,
+                                                    index,
+                                                    h
+                                                ).coerceIn(
+                                                    0f,
+                                                    Math.PI.toFloat() / 2f
+                                                )
+
+                                            } else {
+
+                                                0f
+                                            }
+
+                                        val orientation =
+                                            if (
+                                                isStylus
+                                            ) {
+
+                                                event.getHistoricalAxisValue(
+                                                    MotionEvent.AXIS_ORIENTATION,
+                                                    index,
+                                                    h
+                                                )
+
+                                            } else {
+
+                                                0f
+                                            }
 
                                         currentPathPoints.add(
 
                                             Point(
 
                                                 x =
-                                                    change.position.x,
+                                                    event.getHistoricalX(
+                                                        index,
+                                                        h
+                                                    ),
 
                                                 y =
-                                                    change.position.y,
+                                                    event.getHistoricalY(
+                                                        index,
+                                                        h
+                                                    ),
 
                                                 pressure =
-                                                    pressure
+                                                    pressure,
+
+                                                tilt =
+                                                    tilt,
+
+                                                orientation =
+                                                    orientation,
+
+                                                isStylus =
+                                                    isStylus
                                             )
                                         )
+                                    }
+
+
+                                    // -------------------------------------
+                                    // CURRENT EVENT
+                                    // -------------------------------------
+
+                                    addPointFromEvent(
+                                        event,
+                                        index
+                                    )
+
+                                    true
+                                }
+
+
+                                // =========================================
+                                // POINTER UP
+                                // =========================================
+
+                                MotionEvent.ACTION_POINTER_UP -> {
+
+                                    if (
+                                        !multiTouchDetected
+                                    ) {
+
+                                        val index =
+                                            event.actionIndex
+
+                                        val id =
+                                            event.getPointerId(
+                                                index
+                                            )
+
+                                        if (
+                                            id ==
+                                            activePointerId
+                                        ) {
+
+                                            finalizeStroke()
+                                        }
+                                    }
+
+                                    true
+                                }
+
+
+                                // =========================================
+                                // UP
+                                // =========================================
+
+                                MotionEvent.ACTION_UP -> {
+
+                                    if (
+                                        !multiTouchDetected
+                                    ) {
+
+                                        finalizeStroke()
 
                                     } else {
 
-                                        currentPathPoints.add(
-
-                                            Point(
-
-                                                x =
-                                                    change.position.x,
-
-                                                y =
-                                                    change.position.y,
-
-                                                pressure =
-                                                    pressure
-                                            )
-                                        )
+                                        cancelStroke()
                                     }
 
-
-                                    change.consume()
-                                },
-
-
-                                // =================================
-                                // END
-                                // =================================
-
-                                onDragEnd = {
-
-                                    if (
-                                        currentPathPoints.isEmpty()
-                                    ) {
-
-                                        return@detectDragGestures
-                                    }
-
-
-                                    val settings =
-                                        toolSettings[
-                                            currentTool
-                                        ] ?: ToolSettings(
-                                            4f,
-                                            1f
-                                        )
-
-
-                                    val newPath =
-                                        DrawPath(
-
-                                            points =
-                                                currentPathPoints
-                                                    .toList(),
-
-                                            colorHex =
-                                                currentColor
-                                                    .toHex(),
-
-                                            strokeWidth =
-                                                settings.size,
-
-                                            toolType =
-                                                currentTool,
-
-                                            shapeType =
-                                                if (
-                                                    currentTool ==
-                                                    ToolType.SHAPE
-                                                ) {
-
-                                                    currentShape
-
-                                                } else {
-
-                                                    null
-                                                },
-
-                                            isFilled =
-                                                isFillEnabled,
-
-                                            fillColorHex =
-                                                if (
-                                                    isFillEnabled
-                                                ) {
-
-                                                    currentFillColor
-                                                        .toHex()
-
-                                                } else {
-
-                                                    null
-                                                },
-
-                                            opacity =
-                                                settings.opacity
-                                        )
-
-
-                                    undoStack =
-                                        undoStack + document
-
-                                    redoStack =
-                                        emptyList()
-
-
-                                    document =
-                                        document.copy(
-
-                                            paths =
-                                                document.paths +
-                                                    newPath
-                                        )
-
-
-                                    currentPathPoints.clear()
-
-                                    saveCurrentState()
-                                },
-
-
-                                onDragCancel = {
-
-                                    currentPathPoints.clear()
+                                    true
                                 }
-                            )
+
+
+                                // =========================================
+                                // CANCEL
+                                // =========================================
+
+                                MotionEvent.ACTION_CANCEL -> {
+
+                                    cancelStroke()
+
+                                    true
+                                }
+
+
+                                else -> {
+
+                                    true
+                                }
+                            }
                         }
             ) {
 
-                // =================================================
-                // SAVED
-                // =================================================
+                // =====================================================
+                // SAVED PATHS
+                // =====================================================
 
                 document.paths.forEach {
 
-                    drawDataPath(it)
+                    drawDataPath(
+                        it
+                    )
                 }
 
 
-                // =================================================
-                // PREVIEW
-                // =================================================
+                // =====================================================
+                // LIVE PREVIEW
+                // =====================================================
 
                 if (
                     currentPathPoints.isNotEmpty()
@@ -1810,7 +2323,6 @@ fun DrawingCanvas(
                             4f,
                             1f
                         )
-
 
                     val preview =
                         DrawPath(
@@ -1859,7 +2371,6 @@ fun DrawingCanvas(
                                 settings.opacity
                         )
 
-
                     drawDataPath(
                         preview
                     )
@@ -1867,6 +2378,36 @@ fun DrawingCanvas(
             }
         }
     }
+}
+
+
+// =============================================================
+// SHAPE MENU ITEM
+// =============================================================
+
+@Composable
+private fun ShapeMenuItem(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+
+    DropdownMenuItem(
+
+        text = {
+            Text(title)
+        },
+
+        onClick = onClick,
+
+        leadingIcon = {
+
+            Icon(
+                icon,
+                contentDescription = null
+            )
+        }
+    )
 }
 
 
@@ -1911,10 +2452,14 @@ private fun ToolButton(
                     icon,
 
                 contentDescription =
-                    toolDisplayName(tool),
+                    toolDisplayName(
+                        tool
+                    ),
 
                 tint =
-                    if (selected) {
+                    if (
+                        selected
+                    ) {
 
                         MaterialTheme
                             .colorScheme
@@ -1933,10 +2478,8 @@ private fun ToolButton(
             expanded =
                 expanded,
 
-            onDismissRequest = {
-
-                onDismissRequest()
-            },
+            onDismissRequest =
+                onDismissRequest,
 
             modifier =
                 Modifier.width(
@@ -1955,7 +2498,9 @@ private fun ToolButton(
                 Text(
 
                     text =
-                        toolDisplayName(tool),
+                        toolDisplayName(
+                            tool
+                        ),
 
                     style =
                         MaterialTheme
@@ -1965,8 +2510,9 @@ private fun ToolButton(
 
 
                 Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
                 )
 
 
@@ -1977,7 +2523,9 @@ private fun ToolButton(
                 Text(
 
                     text =
-                        "Boyut: ${settings.size.toInt()} px",
+                        "Boyut: ${
+                            settings.size.toInt()
+                        } px",
 
                     style =
                         MaterialTheme
@@ -2001,7 +2549,9 @@ private fun ToolButton(
                     },
 
                     valueRange =
-                        toolSizeRange(tool)
+                        toolSizeRange(
+                            tool
+                        )
                 )
 
 
@@ -2009,7 +2559,9 @@ private fun ToolButton(
                 // OPACITY
                 // =================================================
 
-                if (showOpacity) {
+                if (
+                    showOpacity
+                ) {
 
                     Text(
 
@@ -2017,8 +2569,8 @@ private fun ToolButton(
                             "Opaklık: ${
                                 (
                                     settings.opacity *
-                                    100
-                                ).toInt()
+                                        100
+                                    ).toInt()
                             }%",
 
                         style =
@@ -2049,40 +2601,14 @@ private fun ToolButton(
 
 
                 Spacer(
-                    modifier =
-                        Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
                 )
 
 
                 // =================================================
-                // PRESSURE INFO
-                // =================================================
-
-                if (
-                    tool != ToolType.ERASER
-                ) {
-
-                    Text(
-
-                        text =
-                            "Stylus basıncı: Aktif",
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .labelSmall
-                    )
-
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(8.dp)
-                    )
-                }
-
-
-                // =================================================
-                // QUICK SIZE
+                // QUICK SIZES
                 // =================================================
 
                 Row(
@@ -2106,13 +2632,15 @@ private fun ToolButton(
 
                             onClick = {
 
-                                val allowed =
-                                    toolSizeRange(tool)
+                                val range =
+                                    toolSizeRange(
+                                        tool
+                                    )
 
                                 val newSize =
                                     size.coerceIn(
-                                        allowed.start,
-                                        allowed.endInclusive
+                                        range.start,
+                                        range.endInclusive
                                     )
 
                                 onSettingsChanged(
@@ -2123,11 +2651,7 @@ private fun ToolButton(
                                     )
                                 )
 
-                                /*
-                                 * KRİTİK:
-                                 * Hızlı boyut seçildikten
-                                 * sonra menüyü kapat.
-                                 */
+                                // Menü otomatik kapanır.
                                 onDismissRequest()
                             },
 
@@ -2203,8 +2727,9 @@ private fun ColorPalettePopup(
 
 
             Spacer(
-                modifier =
-                    Modifier.height(8.dp)
+                Modifier.height(
+                    8.dp
+                )
             )
 
 
@@ -2269,21 +2794,27 @@ private fun ColorPalettePopup(
                                         value
                                 )
 
-
                             Box(
 
                                 modifier =
                                     Modifier
-                                        .size(20.dp)
-                                        .background(color)
+                                        .size(
+                                            20.dp
+                                        )
+                                        .background(
+                                            color
+                                        )
                                         .border(
 
                                             if (
                                                 currentColor ==
                                                 color
                                             ) {
+
                                                 2.dp
+
                                             } else {
+
                                                 0.dp
                                             },
 
@@ -2303,8 +2834,9 @@ private fun ColorPalettePopup(
 
 
             Spacer(
-                modifier =
-                    Modifier.height(12.dp)
+                Modifier.height(
+                    12.dp
+                )
             )
 
 
@@ -2312,8 +2844,9 @@ private fun ColorPalettePopup(
 
 
             Spacer(
-                modifier =
-                    Modifier.height(10.dp)
+                Modifier.height(
+                    10.dp
+                )
             )
 
 
@@ -2349,21 +2882,29 @@ private fun ColorPalettePopup(
 
                         modifier =
                             Modifier
-                                .size(28.dp)
+                                .size(
+                                    28.dp
+                                )
                                 .background(
                                     color,
                                     CircleShape
                                 )
                                 .border(
+
                                     if (
                                         currentColor ==
                                         color
                                     ) {
+
                                         2.dp
+
                                     } else {
+
                                         0.dp
                                     },
+
                                     Color.Gray,
+
                                     CircleShape
                                 )
                                 .clickable {
@@ -2405,33 +2946,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
         ToolType.ERASER
     ) {
 
-        val eraserPath =
-            Path()
-
-
-        eraserPath.moveTo(
-
-            drawPath.points.first().x,
-
-            drawPath.points.first().y
-        )
-
-
-        drawPath.points
-            .drop(1)
-            .forEach {
-
-                eraserPath.lineTo(
-                    it.x,
-                    it.y
-                )
-            }
-
+        val path =
+            buildPath(
+                drawPath.points
+            )
 
         drawPath(
 
             path =
-                eraserPath,
+                path,
 
             color =
                 Color.White,
@@ -2443,7 +2966,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
                         drawPath.strokeWidth,
 
                     cap =
-                        StrokeCap.Round
+                        StrokeCap.Round,
+
+                    join =
+                        StrokeJoin.Round
                 )
         )
 
@@ -2456,92 +2982,16 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
     // =========================================================
 
     val baseColor =
-        try {
-
-            Color(
-                android.graphics.Color.parseColor(
-                    drawPath.colorHex
-                )
-            )
-
-        } catch (_: Exception) {
-
-            Color.Black
-        }
-
-
-    // =========================================================
-    // OPACITY
-    // =========================================================
-
-    val alpha =
-        drawPath.opacity.coerceIn(
-            0.05f,
-            1f
+        colorFromHex(
+            drawPath.colorHex
         )
 
 
-    // =========================================================
-    // FINAL COLOR
-    // =========================================================
-
-    val finalColor =
-        when (drawPath.toolType) {
-
-            ToolType.PENCIL ->
-                baseColor.copy(
-                    alpha =
-                        alpha * 0.80f
-                )
-
-            ToolType.MARKER ->
-                baseColor.copy(
-                    alpha =
-                        alpha * 0.45f
-                )
-
-            ToolType.BRUSH ->
-                baseColor.copy(
-                    alpha =
-                        alpha
-                )
-
-            else ->
-                baseColor.copy(
-                    alpha =
-                        alpha
-                )
-        }
-
-
-    // =========================================================
-    // FILL
-    // =========================================================
-
-    val fillColor =
-
-        if (
-            drawPath.isFilled &&
-            drawPath.fillColorHex != null
-        ) {
-
-            try {
-
-                Color(
-                    android.graphics.Color.parseColor(
-                        drawPath.fillColorHex
-                    )
-                )
-
-            } catch (_: Exception) {
-
-                Color.Transparent
-            }
-
-        } else {
-
-            Color.Transparent
-        }
+    val baseAlpha =
+        drawPath.opacity.coerceIn(
+            0.03f,
+            1f
+        )
 
 
     // =========================================================
@@ -2554,538 +3004,21 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
         ToolType.SHAPE &&
 
         drawPath.points.size >= 2
-
     ) {
 
-        val start =
-            Offset(
-
-                drawPath.points[0].x,
-
-                drawPath.points[0].y
-            )
-
-
-        val end =
-            Offset(
-
-                drawPath.points[1].x,
-
-                drawPath.points[1].y
-            )
-
-
-        val left =
-            min(
-                start.x,
-                end.x
-            )
-
-
-        val top =
-            min(
-                start.y,
-                end.y
-            )
-
-
-        val width =
-            abs(
-                start.x -
-                    end.x
-            )
-
-
-        val height =
-            abs(
-                start.y -
-                    end.y
-            )
-
-
-        val shapeWidth =
-            max(
-                width,
-                1f
-            )
-
-
-        val shapeHeight =
-            max(
-                height,
-                1f
-            )
-
-
-        val pressure =
-            drawPath.points
-                .lastOrNull()
-                ?.pressure
-                ?.coerceIn(
-                    0.05f,
-                    1f
-                )
-                ?: 1f
-
-
-        val shapeStrokeWidth =
-            drawPath.strokeWidth *
-                pressureWidthFactor(
-                    drawPath.toolType,
-                    pressure
-                )
-
-
-        when (
-            drawPath.shapeType
-        ) {
-
-            // =====================================================
-            // RECTANGLE
-            // =====================================================
-
-            ShapeType.RECTANGLE -> {
-
-                if (
-                    drawPath.isFilled
-                ) {
-
-                    drawRect(
-
-                        color =
-                            fillColor,
-
-                        topLeft =
-                            Offset(
-                                left,
-                                top
-                            ),
-
-                        size =
-                            Size(
-                                shapeWidth,
-                                shapeHeight
-                            )
-                    )
-                }
-
-
-                drawRect(
-
-                    color =
-                        finalColor,
-
-                    topLeft =
-                        Offset(
-                            left,
-                            top
-                        ),
-
-                    size =
-                        Size(
-                            shapeWidth,
-                            shapeHeight
-                        ),
-
-                    style =
-                        Stroke(
-                            width =
-                                shapeStrokeWidth
-                        )
-                )
-            }
-
-
-            // =====================================================
-            // CIRCLE
-            // =====================================================
-
-            ShapeType.CIRCLE -> {
-
-                val radius =
-                    min(
-                        width,
-                        height
-                    ) / 2f
-
-
-                val center =
-                    Offset(
-
-                        left +
-                            width / 2f,
-
-                        top +
-                            height / 2f
-                    )
-
-
-                if (
-                    drawPath.isFilled
-                ) {
-
-                    drawCircle(
-
-                        color =
-                            fillColor,
-
-                        radius =
-                            radius,
-
-                        center =
-                            center
-                    )
-                }
-
-
-                drawCircle(
-
-                    color =
-                        finalColor,
-
-                    radius =
-                        radius,
-
-                    center =
-                        center,
-
-                    style =
-                        Stroke(
-                            width =
-                                shapeStrokeWidth
-                        )
-                )
-            }
-
-
-            // =====================================================
-            // TRIANGLE
-            // =====================================================
-
-            ShapeType.TRIANGLE -> {
-
-                val path =
-                    Path().apply {
-
-                        moveTo(
-
-                            left +
-                                width / 2f,
-
-                            top
-                        )
-
-                        lineTo(
-
-                            left,
-
-                            top +
-                                height
-                        )
-
-                        lineTo(
-
-                            left +
-                                width,
-
-                            top +
-                                height
-                        )
-
-                        close()
-                    }
-
-
-                if (
-                    drawPath.isFilled
-                ) {
-
-                    drawPath(
-                        path,
-                        fillColor
-                    )
-                }
-
-
-                drawPath(
-
-                    path,
-
-                    finalColor,
-
-                    style =
-                        Stroke(
-                            width =
-                                shapeStrokeWidth
-                        )
-                )
-            }
-
-
-            // =====================================================
-            // ELLIPSE
-            // =====================================================
-
-            ShapeType.ELLIPSE -> {
-
-                if (
-                    drawPath.isFilled
-                ) {
-
-                    drawOval(
-
-                        color =
-                            fillColor,
-
-                        topLeft =
-                            Offset(
-                                left,
-                                top
-                            ),
-
-                        size =
-                            Size(
-                                shapeWidth,
-                                shapeHeight
-                            )
-                    )
-                }
-
-
-                drawOval(
-
-                    color =
-                        finalColor,
-
-                    topLeft =
-                        Offset(
-                            left,
-                            top
-                        ),
-
-                    size =
-                        Size(
-                            shapeWidth,
-                            shapeHeight
-                        ),
-
-                    style =
-                        Stroke(
-                            width =
-                                shapeStrokeWidth
-                        )
-                )
-            }
-
-
-            // =====================================================
-            // ARC
-            // =====================================================
-
-            ShapeType.ARC -> {
-
-                drawArc(
-
-                    color =
-                        finalColor,
-
-                    startAngle =
-                        0f,
-
-                    sweepAngle =
-                        180f,
-
-                    useCenter =
-                        false,
-
-                    topLeft =
-                        Offset(
-                            left,
-                            top
-                        ),
-
-                    size =
-                        Size(
-                            shapeWidth,
-                            shapeHeight
-                        ),
-
-                    style =
-                        Stroke(
-                            width =
-                                shapeStrokeWidth
-                        )
-                )
-            }
-
-
-            null -> Unit
-        }
-
+        drawShape(
+            drawPath,
+            baseColor,
+            baseAlpha
+        )
 
         return
     }
 
 
     // =========================================================
-    // NORMAL STROKE
+    // NORMAL DRAWING
     // =========================================================
-
-    if (
-        drawPath.points.size == 1
-    ) {
-
-        val point =
-            drawPath.points.first()
-
-
-        val pressure =
-            point.pressure.coerceIn(
-                0.05f,
-                1f
-            )
-
-
-        val width =
-            drawPath.strokeWidth *
-                pressureWidthFactor(
-                    drawPath.toolType,
-                    pressure
-                )
-
-
-        drawCircle(
-
-            color =
-                finalColor,
-
-            radius =
-                width / 2f,
-
-            center =
-                Offset(
-                    point.x,
-                    point.y
-                )
-        )
-
-
-        return
-    }
-
-
-    // =========================================================
-    // PRESSURE-SENSITIVE STROKE
-    // =========================================================
-
-    /*
-     * Her iki nokta arasındaki segment ayrı çiziliyor.
-     *
-     * Böylece Stylus basıncı değiştikçe
-     * çizgi kalınlığı da yumuşak şekilde değişiyor.
-     */
-
-    for (
-        i in 1 until drawPath.points.size
-    ) {
-
-        val previous =
-            drawPath.points[i - 1]
-
-        val current =
-            drawPath.points[i]
-
-
-        val p1 =
-            previous.pressure.coerceIn(
-                0.05f,
-                1f
-            )
-
-
-        val p2 =
-            current.pressure.coerceIn(
-                0.05f,
-                1f
-            )
-
-
-        val averagePressure =
-            (
-                p1 +
-                    p2
-            ) / 2f
-
-
-        val pressureFactor =
-            pressureWidthFactor(
-
-                drawPath.toolType,
-
-                averagePressure
-            )
-
-
-        val width =
-            drawPath.strokeWidth *
-                pressureFactor
-
-
-        val segmentPath =
-            Path()
-
-
-        segmentPath.moveTo(
-
-            previous.x,
-
-            previous.y
-        )
-
-
-        segmentPath.lineTo(
-
-            current.x,
-
-            current.y
-        )
-
-
-        drawPath(
-
-            path =
-                segmentPath,
-
-            color =
-                finalColor,
-
-            style =
-                Stroke(
-
-                    width =
-                        width,
-
-                    cap =
-                        StrokeCap.Round
-                )
-        )
-    }
-
-
-    // =========================================================
-    // TEXTURE
-    // =========================================================
-
-    /*
-     * Pencil:
-     * Hafif kuru / kırık görünüm.
-     *
-     * Brush:
-     * Kenarların daha yumuşak hissedilmesi.
-     *
-     * Marker:
-     * Daha düz ve yarı saydam.
-     */
 
     when (
         drawPath.toolType
@@ -3093,27 +3026,50 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
         ToolType.PENCIL -> {
 
-            drawPencilTexture(
+            drawPencilStroke(
                 drawPath,
-                finalColor
+                baseColor,
+                baseAlpha
+            )
+        }
+
+
+        ToolType.INK -> {
+
+            drawInkStroke(
+                drawPath,
+                baseColor,
+                baseAlpha
             )
         }
 
 
         ToolType.BRUSH -> {
 
-            drawBrushTexture(
+            drawBrushStroke(
                 drawPath,
-                finalColor
+                baseColor,
+                baseAlpha
             )
         }
 
 
         ToolType.MARKER -> {
 
-            drawMarkerTexture(
+            drawMarkerStroke(
                 drawPath,
-                finalColor
+                baseColor,
+                baseAlpha
+            )
+        }
+
+
+        ToolType.PEN -> {
+
+            drawPenStroke(
+                drawPath,
+                baseColor,
+                baseAlpha
             )
         }
 
@@ -3124,351 +3080,1146 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope
 
 
 // =============================================================
-// PRESSURE WIDTH
-// =============================================================
-
-private fun pressureWidthFactor(
-    tool: ToolType,
-    pressure: Float
-): Float {
-
-    val p =
-        pressure.coerceIn(
-            0.05f,
-            1f
-        )
-
-
-    return when (tool) {
-
-        ToolType.PENCIL -> {
-
-            /*
-             * Pencil basınca oldukça duyarlı.
-             */
-            0.35f +
-                p * 1.15f
-        }
-
-
-        ToolType.PEN -> {
-
-            /*
-             * Gerçek tükenmez kalem gibi
-             * daha kontrollü değişim.
-             */
-            0.60f +
-                p * 0.65f
-        }
-
-
-        ToolType.INK -> {
-
-            /*
-             * Mürekkep kaleminde basınç
-             * daha belirgin.
-             */
-            0.45f +
-                p * 0.95f
-        }
-
-
-        ToolType.BRUSH -> {
-
-            /*
-             * Fırça basınçtan en fazla etkilenen araç.
-             */
-            0.25f +
-                p * 1.50f
-        }
-
-
-        ToolType.MARKER -> {
-
-            /*
-             * Marker daha stabil.
-             */
-            0.75f +
-                p * 0.40f
-        }
-
-
-        else -> {
-
-            1f
-        }
-    }
-}
-
-
-// =============================================================
-// PENCIL TEXTURE
+// PEN
 // =============================================================
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
-    .drawPencilTexture(
-        drawPath: DrawPath,
-        color: Color
+    .drawPenStroke(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
     ) {
 
     if (
-        drawPath.points.size < 2
-    ) {
-        return
-    }
-
-
-    /*
-     * Çok hafif ikinci katman.
-     *
-     * Gerçek raster pencil texture yerine
-     * Compose Canvas üzerinde performanslı
-     * bir yaklaşım kullanıyoruz.
-     */
-
-    val textureColor =
-        color.copy(
-            alpha =
-                color.alpha * 0.16f
-        )
-
-
-    for (
-        i in 1 until drawPath.points.size step 2
+        data.points.size == 1
     ) {
 
         val p =
-            drawPath.points[i]
+            data.points.first()
 
-
-        val previous =
-            drawPath.points[
-                i - 1
-            ]
-
-
-        val path =
-            Path()
-
-
-        path.moveTo(
-            previous.x,
-            previous.y
-        )
-
-
-        path.lineTo(
-            p.x,
-            p.y
-        )
-
-
-        drawPath(
-
-            path =
-                path,
+        drawCircle(
 
             color =
-                textureColor,
+                color.copy(
+                    alpha = alpha
+                ),
 
-            style =
-                Stroke(
+            radius =
+                data.strokeWidth / 2f,
 
-                    width =
-                        drawPath.strokeWidth *
-                            0.45f,
-
-                    cap =
-                        StrokeCap.Round
+            center =
+                Offset(
+                    p.x,
+                    p.y
                 )
         )
-    }
-}
 
-
-// =============================================================
-// BRUSH TEXTURE
-// =============================================================
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope
-    .drawBrushTexture(
-        drawPath: DrawPath,
-        color: Color
-    ) {
-
-    if (
-        drawPath.points.size < 2
-    ) {
         return
     }
-
-
-    val textureColor =
-        color.copy(
-            alpha =
-                color.alpha * 0.10f
-        )
-
-
-    /*
-     * Fırça hissini güçlendirmek için
-     * ana stroke'un iki yanında çok hafif
-     * yardımcı stroke'lar çiziyoruz.
-     */
-
-    val offset =
-        drawPath.strokeWidth *
-            0.22f
 
 
     for (
-        i in 1 until drawPath.points.size
+        i in 1 until data.points.size
     ) {
 
         val a =
-            drawPath.points[i - 1]
+            data.points[i - 1]
 
         val b =
-            drawPath.points[i]
+            data.points[i]
+
+        val pressure =
+            if (
+                a.isStylus
+            ) {
+
+                (
+                    a.pressure +
+                        b.pressure
+                    ) / 2f
+
+            } else {
+
+                1f
+            }
+
+        val width =
+            data.strokeWidth *
+                (
+                    0.72f +
+                        pressure * 0.48f
+                    )
 
 
-        val dx =
-            b.x - a.x
-
-        val dy =
-            b.y - a.y
-
-
-        val length =
-            max(
-                kotlin.math.sqrt(
-                    dx * dx +
-                        dy * dy
-                ),
-                0.001f
-            )
-
-
-        val nx =
-            -dy / length
-
-        val ny =
-            dx / length
-
-
-        val path1 =
-            Path()
-
-
-        path1.moveTo(
-            a.x + nx * offset,
-            a.y + ny * offset
-        )
-
-
-        path1.lineTo(
-            b.x + nx * offset,
-            b.y + ny * offset
-        )
-
-
-        drawPath(
-
-            path =
-                path1,
+        drawLine(
 
             color =
-                textureColor,
+                color.copy(
+                    alpha = alpha
+                ),
 
-            style =
-                Stroke(
+            start =
+                Offset(
+                    a.x,
+                    a.y
+                ),
 
-                    width =
-                        drawPath.strokeWidth *
-                            0.35f,
+            end =
+                Offset(
+                    b.x,
+                    b.y
+                ),
 
-                    cap =
-                        StrokeCap.Round
-                )
+            strokeWidth =
+                width,
+
+            cap =
+                StrokeCap.Round
         )
     }
 }
 
 
 // =============================================================
-// MARKER TEXTURE
+// INK
+// =============================================================
+//
+// Pressure-to-width curve.
 // =============================================================
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope
-    .drawMarkerTexture(
-        drawPath: DrawPath,
-        color: Color
+    .drawInkStroke(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
     ) {
 
     if (
-        drawPath.points.size < 2
+        data.points.size == 1
     ) {
+
+        val p =
+            data.points.first()
+
+        drawCircle(
+
+            color =
+                color.copy(
+                    alpha = alpha
+                ),
+
+            radius =
+                data.strokeWidth *
+                    inkPressureCurve(
+                        p.pressure
+                    ) / 2f,
+
+            center =
+                Offset(
+                    p.x,
+                    p.y
+                )
+        )
+
         return
     }
 
 
-    /*
-     * Marker için hafif bir ikinci geçiş.
-     * Marker'ın dijital çizgi yerine
-     * daha yumuşak görünmesini sağlar.
-     */
+    for (
+        i in 1 until data.points.size
+    ) {
 
-    val markerColor =
-        color.copy(
-            alpha =
-                color.alpha * 0.12f
+        val a =
+            data.points[i - 1]
+
+        val b =
+            data.points[i]
+
+        val p =
+            (
+                a.pressure +
+                    b.pressure
+                ) / 2f
+
+        val width =
+            max(
+                0.35f,
+                data.strokeWidth *
+                    inkPressureCurve(
+                        p
+                    )
+            )
+
+        val inkAlpha =
+            (
+                alpha *
+                    (
+                        0.70f +
+                            p * 0.30f
+                        )
+                ).coerceIn(
+                    0f,
+                    1f
+                )
+
+        drawLine(
+
+            color =
+                color.copy(
+                    alpha =
+                        inkAlpha
+                ),
+
+            start =
+                Offset(
+                    a.x,
+                    a.y
+                ),
+
+            end =
+                Offset(
+                    b.x,
+                    b.y
+                ),
+
+            strokeWidth =
+                width,
+
+            cap =
+                StrokeCap.Round,
+
+            )
+
+    }
+}
+
+
+// =============================================================
+// PENCIL
+// =============================================================
+//
+// Gerçekçi yaklaşım:
+//
+// 1. yumuşak graphite base
+// 2. basınca bağlı core
+// 3. deterministic grain
+//
+// Daire damgalama YOK.
+// =============================================================
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawPencilStroke(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
+    ) {
+
+    if (
+        data.points.size == 1
+    ) {
+
+        val p =
+            data.points.first()
+
+        drawCircle(
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha * 0.45f
+                ),
+
+            radius =
+                data.strokeWidth *
+                    pencilPressure(
+                        p.pressure
+                    ) / 2f,
+
+            center =
+                Offset(
+                    p.x,
+                    p.y
+                )
         )
 
-
-    val path =
-        Path()
-
-
-    path.moveTo(
-
-        drawPath.points
-            .first()
-            .x,
-
-        drawPath.points
-            .first()
-            .y
-    )
+        return
+    }
 
 
-    drawPath.points
-        .drop(1)
-        .forEach {
+    // =========================================================
+    // BASE GRAPHITE
+    // =========================================================
 
-            path.lineTo(
-                it.x,
-                it.y
-            )
-        }
-
+    val basePath =
+        buildPath(
+            data.points
+        )
 
     drawPath(
 
         path =
-            path,
+            basePath,
 
         color =
-            markerColor,
+            color.copy(
+                alpha =
+                    alpha * 0.22f
+            ),
 
         style =
             Stroke(
 
                 width =
-                    drawPath.strokeWidth *
-                        1.12f,
+                    data.strokeWidth *
+                        0.95f,
 
                 cap =
-                    StrokeCap.Round
+                    StrokeCap.Round,
+
+                join =
+                    StrokeJoin.Round
             )
     )
+
+
+    // =========================================================
+    // PRESSURE CORE
+    // =========================================================
+
+    for (
+        i in 1 until data.points.size
+    ) {
+
+        val a =
+            data.points[i - 1]
+
+        val b =
+            data.points[i]
+
+        val pressure =
+            (
+                a.pressure +
+                    b.pressure
+                ) / 2f
+
+        val width =
+            data.strokeWidth *
+                pencilPressure(
+                    pressure
+                )
+
+        drawLine(
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha *
+                            (
+                                0.18f +
+                                    pressure * 0.35f
+                                )
+                ),
+
+            start =
+                Offset(
+                    a.x,
+                    a.y
+                ),
+
+            end =
+                Offset(
+                    b.x,
+                    b.y
+                ),
+
+            strokeWidth =
+                width,
+
+            cap =
+                StrokeCap.Round
+        )
+    }
+
+
+    // =========================================================
+    // GRAIN
+    // =========================================================
+    //
+    // Birkaç paralel mikro graphite çizgisi.
+    //
+    // Nokta değil.
+    // =========================================================
+
+    for (
+        grainLayer in 0..2
+    ) {
+
+        val offset =
+            (
+                grainLayer - 1
+                ) *
+                data.strokeWidth *
+                0.22f
+
+        val grainPath =
+            Path()
+
+        var started =
+            false
+
+        for (
+            i in 1 until data.points.size
+        ) {
+
+            val a =
+                data.points[i - 1]
+
+            val b =
+                data.points[i]
+
+            val dx =
+                b.x - a.x
+
+            val dy =
+                b.y - a.y
+
+            val length =
+                sqrt(
+                    dx * dx +
+                        dy * dy
+                )
+
+            if (
+                length < 0.01f
+            ) {
+                continue
+            }
+
+            val nx =
+                -dy / length
+
+            val ny =
+                dx / length
+
+            val ox =
+                nx * offset
+
+            val oy =
+                ny * offset
+
+            val noise =
+                grainNoise(
+                    i * 17 +
+                        grainLayer * 791
+                )
+
+            if (
+                noise > 0.27f
+            ) {
+
+                if (!started) {
+
+                    grainPath.moveTo(
+                        a.x + ox,
+                        a.y + oy
+                    )
+
+                    started =
+                        true
+                }
+
+                grainPath.lineTo(
+                    b.x + ox,
+                    b.y + oy
+                )
+
+            } else {
+
+                started =
+                    false
+            }
+        }
+
+
+        drawPath(
+
+            path =
+                grainPath,
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha *
+                            0.10f
+                ),
+
+            style =
+                Stroke(
+
+                    width =
+                        max(
+                            0.35f,
+                            data.strokeWidth *
+                                0.22f
+                        ),
+
+                    cap =
+                        StrokeCap.Butt,
+
+                    join =
+                        StrokeJoin.Miter
+                )
+        )
+    }
+}
+
+
+// =============================================================
+// BRUSH
+// =============================================================
+//
+// Pressure + Tilt
+//
+// Tilt arttıkça brush genişler.
+// Pressure arttıkça yoğunluk ve kalınlık artar.
+// =============================================================
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawBrushStroke(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
+    ) {
+
+    if (
+        data.points.size == 1
+    ) {
+
+        val p =
+            data.points.first()
+
+        val width =
+            data.strokeWidth *
+                brushPressure(
+                    p.pressure
+                ) *
+                tiltFactor(
+                    p.tilt
+                )
+
+        drawCircle(
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha * 0.70f
+                ),
+
+            radius =
+                width / 2f,
+
+            center =
+                Offset(
+                    p.x,
+                    p.y
+                )
+        )
+
+        return
+    }
+
+
+    for (
+        i in 1 until data.points.size
+    ) {
+
+        val a =
+            data.points[i - 1]
+
+        val b =
+            data.points[i]
+
+        val pressure =
+            (
+                a.pressure +
+                    b.pressure
+                ) / 2f
+
+        val tilt =
+            (
+                a.tilt +
+                    b.tilt
+                ) / 2f
+
+        val width =
+            data.strokeWidth *
+                brushPressure(
+                    pressure
+                ) *
+                tiltFactor(
+                    tilt
+                )
+
+
+        val brushAlpha =
+            (
+                alpha *
+                    (
+                        0.48f +
+                            pressure * 0.45f
+                        )
+                ).coerceIn(
+                    0.05f,
+                    1f
+                )
+
+
+        drawLine(
+
+            color =
+                color.copy(
+                    alpha =
+                        brushAlpha
+                ),
+
+            start =
+                Offset(
+                    a.x,
+                    a.y
+                ),
+
+            end =
+                Offset(
+                    b.x,
+                    b.y
+                ),
+
+            strokeWidth =
+                width,
+
+            cap =
+                StrokeCap.Round,
+
+            )
+    }
+}
+
+
+// =============================================================
+// MARKER
+// =============================================================
+//
+// Marker:
+//
+// - flat/butt cap
+// - pressure width
+// - tilt width
+// - daha düşük opacity
+// =============================================================
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawMarkerStroke(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
+    ) {
+
+    if (
+        data.points.size == 1
+    ) {
+
+        val p =
+            data.points.first()
+
+        val width =
+            data.strokeWidth *
+                (
+                    0.72f +
+                        p.pressure * 0.55f
+                    ) *
+                (
+                    1f +
+                        (
+                            p.tilt /
+                                (
+                                    Math.PI.toFloat() /
+                                        2f
+                                    )
+                            ).coerceIn(
+                                0f,
+                                1f
+                            ) *
+                            0.8f
+                    )
+
+        drawLine(
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha * 0.72f
+                ),
+
+            start =
+                Offset(
+                    p.x - 0.1f,
+                    p.y
+                ),
+
+            end =
+                Offset(
+                    p.x + 0.1f,
+                    p.y
+                ),
+
+            strokeWidth =
+                width,
+
+            cap =
+                StrokeCap.Butt
+        )
+
+        return
+    }
+
+
+    for (
+        i in 1 until data.points.size
+    ) {
+
+        val a =
+            data.points[i - 1]
+
+        val b =
+            data.points[i]
+
+        val pressure =
+            (
+                a.pressure +
+                    b.pressure
+                ) / 2f
+
+        val tilt =
+            (
+                a.tilt +
+                    b.tilt
+                ) / 2f
+
+        val tiltNormalized =
+            (
+                tilt /
+                    (
+                        Math.PI.toFloat() /
+                            2f
+                        )
+                ).coerceIn(
+                    0f,
+                    1f
+                )
+
+        val width =
+            data.strokeWidth *
+                (
+                    0.72f +
+                        pressure * 0.55f
+                    ) *
+                (
+                    1f +
+                        tiltNormalized *
+                        0.8f
+                    )
+
+        drawLine(
+
+            color =
+                color.copy(
+                    alpha =
+                        alpha * 0.72f
+                ),
+
+            start =
+                Offset(
+                    a.x,
+                    a.y
+                ),
+
+            end =
+                Offset(
+                    b.x,
+                    b.y
+                ),
+
+            strokeWidth =
+                width,
+
+            // MARKER FLAT TIP
+            cap =
+                StrokeCap.Butt
+        )
+    }
+}
+
+
+// =============================================================
+// SHAPE RENDERER
+// =============================================================
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope
+    .drawShape(
+        data: DrawPath,
+        color: Color,
+        alpha: Float
+    ) {
+
+    if (
+        data.points.size < 2
+    ) {
+        return
+    }
+
+    val start =
+        Offset(
+            data.points[0].x,
+            data.points[0].y
+        )
+
+    val end =
+        Offset(
+            data.points[1].x,
+            data.points[1].y
+        )
+
+    val left =
+        min(
+            start.x,
+            end.x
+        )
+
+    val top =
+        min(
+            start.y,
+            end.y
+        )
+
+    val width =
+        abs(
+            start.x -
+                end.x
+        )
+
+    val height =
+        abs(
+            start.y -
+                end.y
+        )
+
+    val fillColor =
+        if (
+            data.isFilled &&
+            data.fillColorHex != null
+        ) {
+
+            colorFromHex(
+                data.fillColorHex
+            )
+
+        } else {
+
+            Color.Transparent
+        }
+
+    val strokeWidth =
+        data.strokeWidth
+
+
+    when (
+        data.shapeType
+    ) {
+
+        // =====================================================
+        // RECTANGLE
+        // =====================================================
+
+        ShapeType.RECTANGLE -> {
+
+            if (
+                data.isFilled
+            ) {
+
+                drawRect(
+
+                    color =
+                        fillColor,
+
+                    topLeft =
+                        Offset(
+                            left,
+                            top
+                        ),
+
+                    size =
+                        Size(
+                            width,
+                            height
+                        )
+                )
+            }
+
+            drawRect(
+
+                color =
+                    color.copy(
+                        alpha = alpha
+                    ),
+
+                topLeft =
+                    Offset(
+                        left,
+                        top
+                    ),
+
+                size =
+                    Size(
+                        width,
+                        height
+                    ),
+
+                style =
+                    Stroke(
+                        width =
+                            strokeWidth
+                    )
+            )
+        }
+
+
+        // =====================================================
+        // CIRCLE
+        // =====================================================
+
+        ShapeType.CIRCLE -> {
+
+            val radius =
+                min(
+                    width,
+                    height
+                ) / 2f
+
+            val center =
+                Offset(
+
+                    left +
+                        width / 2f,
+
+                    top +
+                        height / 2f
+                )
+
+            if (
+                data.isFilled
+            ) {
+
+                drawCircle(
+
+                    color =
+                        fillColor,
+
+                    radius =
+                        radius,
+
+                    center =
+                        center
+                )
+            }
+
+            drawCircle(
+
+                color =
+                    color.copy(
+                        alpha = alpha
+                    ),
+
+                radius =
+                    radius,
+
+                center =
+                    center,
+
+                style =
+                    Stroke(
+                        width =
+                            strokeWidth
+                    )
+            )
+        }
+
+
+        // =====================================================
+        // TRIANGLE
+        // =====================================================
+
+        ShapeType.TRIANGLE -> {
+
+            val path =
+                Path().apply {
+
+                    moveTo(
+
+                        left +
+                            width / 2f,
+
+                        top
+                    )
+
+                    lineTo(
+
+                        left,
+
+                        top +
+                            height
+                    )
+
+                    lineTo(
+
+                        left +
+                            width,
+
+                        top +
+                            height
+                    )
+
+                    close()
+                }
+
+            if (
+                data.isFilled
+            ) {
+
+                drawPath(
+                    path,
+                    fillColor
+                )
+            }
+
+            drawPath(
+
+                path =
+                    path,
+
+                color =
+                    color.copy(
+                        alpha = alpha
+                    ),
+
+                style =
+                    Stroke(
+                        width =
+                            strokeWidth
+                    )
+            )
+        }
+
+
+        // =====================================================
+        // ELLIPSE
+        // =====================================================
+
+        ShapeType.ELLIPSE -> {
+
+            if (
+                data.isFilled
+            ) {
+
+                drawOval(
+
+                    color =
+                        fillColor,
+
+                    topLeft =
+                        Offset(
+                            left,
+                            top
+                        ),
+
+                    size =
+                        Size(
+                            width,
+                            height
+                        )
+                )
+            }
+
+            drawOval(
+
+                color =
+                    color.copy(
+                        alpha = alpha
+                    ),
+
+                topLeft =
+                    Offset(
+                        left,
+                        top
+                    ),
+
+                size =
+                    Size(
+                        width,
+                        height
+                    ),
+
+                style =
+                    Stroke(
+                        width =
+                            strokeWidth
+                    )
+            )
+        }
+
+
+        // =====================================================
+        // ARC
+        // =====================================================
+
+        ShapeType.ARC -> {
+
+            drawArc(
+
+                color =
+                    color.copy(
+                        alpha = alpha
+                    ),
+
+                startAngle =
+                    0f,
+
+                sweepAngle =
+                    180f,
+
+                useCenter =
+                    false,
+
+                topLeft =
+                    Offset(
+                        left,
+                        top
+                    ),
+
+                size =
+                    Size(
+                        width,
+                        height
+                    ),
+
+                style =
+                    Stroke(
+                        width =
+                            strokeWidth
+                    )
+            )
+        }
+
+
+        null -> Unit
+    }
 }
