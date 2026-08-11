@@ -891,19 +891,13 @@ fun NoteEditorScreen(
                 if (isSketchMode) {
 
                     DrawingCanvas(
-
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-
-                        initialData =
-                            sketchData,
-
-                        onDataChanged = {
-                            sketchData = it
-                        }
-                    )
+    modifier = Modifier.weight(1f),
+    initialData = sketchData,
+    onDataChanged = { sketchData = it },
+    onAddImage = {
+        galleryLauncher.launch("image/*")
+    }
+)
 
                     /*
                      * -------------------------------------------------
